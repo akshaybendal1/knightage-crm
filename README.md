@@ -41,6 +41,10 @@ Backend and Angular frontend built together in one pass (unlike `knightage-accou
 
 This service does not issue tokens — it only validates JWTs issued by `knightage-identity`. `appsettings.json`'s `Jwt:Key`/`Issuer`/`Audience` must match `knightage-identity`'s exactly (shared HMAC secret for now; revisit before this crosses a real network boundary in production).
 
+## Multi-tenancy
+
+Every authenticated request is routed to its own tenant's database, resolved from the JWT's `org_id` claim -- there is no longer one shared database serving every organization. `TenantResolutionMiddleware` (between `UseAuthorization()` and `MapControllers()`) looks up the caller's `Knightage.Crm`-specific database name from `knightage-platform`'s tenant directory (`GET /api/tenants/{organizationId}`, forwarding the caller's own token), caches it for 5 minutes, and stores it on a scoped `CurrentTenantContext`. `DapperContext` reads that per-request instead of a single startup-time connection string, swapping only the `InitialCatalog` -- `ConnectionStrings:Default` still supplies the server/credentials, but its `Database=` segment is no longer read (always overridden per tenant). If the caller's organization hasn't been provisioned for this service yet (e.g. `knightage-platform` is down, or a race right after registration), the request fails fast with `503` rather than reaching a repository. `Tenancy:ServiceName` (`"Crm"`) identifies this service when querying the tenant directory -- it must match the value `knightage-platform`'s `ProvisioningService` provisions under.
+
 ## Client runtime config
 
 Same pattern as `knightage-accounting`: the Angular app doesn't hardcode `knightage-identity`'s URL. It calls `GET /api/client-config` on startup and gets `{ identityBaseUrl }`, read server-side from `appsettings.json`'s `Client:IdentityBaseUrl`.
@@ -61,9 +65,10 @@ dotnet build
 ```
 
 Update `src/Knightage.Crm.Api/appsettings.json`:
-- `ConnectionStrings:Default` — point at your local SQL Server, after running `sql/001_init.sql` against it.
+- `ConnectionStrings:Default` — point at your local SQL Server (server + credentials only; the actual database is resolved per tenant at request time, see "Multi-tenancy" above).
 - `Jwt:Key`/`Issuer`/`Audience` — must match the values configured in `knightage-identity`.
 - `Client:IdentityBaseUrl` — where `knightage-identity` is running (defaults to `http://localhost:5101`).
+- `Services:PlatformBaseUrl` — where `knightage-platform` is running (defaults to `http://localhost:5102`). Needed to resolve each request's tenant database.
 
 ```
 dotnet run --project src/Knightage.Crm.Api

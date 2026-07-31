@@ -1,6 +1,9 @@
 using System.Text;
+using Knightage.Crm.Api.Middleware;
 using Knightage.Crm.Core.Interfaces;
+using Knightage.Crm.Core.Tenancy;
 using Knightage.Crm.Infrastructure.Data;
+using Knightage.Crm.Infrastructure.ExternalServices;
 using Knightage.Crm.Infrastructure.Repositories;
 using Knightage.Crm.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -38,10 +41,20 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddSingleton<DapperContext>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<CurrentTenantContext>();
+builder.Services.AddScoped<DapperContext>();
+builder.Services.AddScoped<ITenantDatabaseResolver, PlatformTenantDatabaseResolver>();
 builder.Services.AddScoped<IPipelineStageRepository, PipelineStageRepository>();
 builder.Services.AddScoped<ILeadRepository, LeadRepository>();
 builder.Services.AddScoped<ILeadImportParser, CsvLeadImportParser>();
+
+var platformBaseUrl = builder.Configuration["Services:PlatformBaseUrl"]
+    ?? throw new InvalidOperationException("Services:PlatformBaseUrl is not configured.");
+builder.Services.AddHttpClient("Platform", client =>
+{
+    client.BaseAddress = new Uri(platformBaseUrl);
+});
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured.");
@@ -76,6 +89,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.MapControllers();
 
 // Angular client-side routes (e.g. /leads) aren't real server routes -- fall back to
