@@ -1,0 +1,42 @@
+<h1>Pipeline Stages</h1>
+
+<form class="card" (ngSubmit)="createStage()">
+  <h2>New stage</h2>
+  <div class="field">
+    <label for="name">Name</label>
+    <input id="name" name="name" type="text" [(ngModel)]="name" required placeholder="e.g. Qualified" />
+  </div>
+  <div class="field">
+    <label for="sortOrder">Sort order</label>
+    <input id="sortOrder" name="sortOrder" type="number" [(ngModel)]="sortOrder" required />
+  </div>
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+  <button type="submit">Add stage</button>
+</form>
+
+@if (loading()) {
+  <p class="hint">Loading...</p>
+} @else {
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Sort order</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (stage of stages(); track stage.id) {
+        <tr>
+          <td>{{ stage.name }}</td>
+          <td>{{ stage.sortOrder }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="2" class="hint">No pipeline stages yet.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
