@@ -3,5 +3,5 @@ using System.ComponentModel.DataAnnotations;
 namespace Knightage.Crm.Api.Contracts;
 
 public record PipelineStageRequest(
-    [property: Required] string Name,
-    [property: Required] int SortOrder);
+    [Required] string Name,
+    [Required] int SortOrder);
