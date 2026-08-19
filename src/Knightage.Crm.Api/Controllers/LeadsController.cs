@@ -13,11 +13,13 @@ public class LeadsController : ControllerBase
 {
     private readonly ILeadRepository _leadRepository;
     private readonly ILeadImportParser _importParser;
+    private readonly ILeadActivityRepository _activityRepository;
 
-    public LeadsController(ILeadRepository leadRepository, ILeadImportParser importParser)
+    public LeadsController(ILeadRepository leadRepository, ILeadImportParser importParser, ILeadActivityRepository activityRepository)
     {
         _leadRepository = leadRepository;
         _importParser = importParser;
+        _activityRepository = activityRepository;
     }
 
     [HttpGet]
@@ -109,5 +111,39 @@ public class LeadsController : ControllerBase
             importedCount = leads.Count,
             errors = parseResult.Errors
         });
+    }
+
+    [HttpGet("{leadId:guid}/activities")]
+    public async Task<IActionResult> GetActivities(Guid leadId)
+    {
+        var lead = await _leadRepository.GetByIdAsync(leadId);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(await _activityRepository.GetByLeadIdAsync(leadId));
+    }
+
+    [HttpPost("{leadId:guid}/activities")]
+    public async Task<IActionResult> CreateActivity(Guid leadId, LeadActivityRequest request)
+    {
+        var lead = await _leadRepository.GetByIdAsync(leadId);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        var activity = new LeadActivity
+        {
+            Id = Guid.NewGuid(),
+            LeadId = leadId,
+            Type = string.IsNullOrWhiteSpace(request.Type) ? "Note" : request.Type,
+            Content = request.Content,
+            CreatedByUserId = User.FindFirst("sub")?.Value,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        await _activityRepository.CreateAsync(activity);
+        return CreatedAtAction(nameof(GetActivities), new { leadId }, activity);
     }
 }

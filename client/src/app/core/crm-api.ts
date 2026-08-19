@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Lead, PipelineStage } from './models';
+import { Lead, LeadActivity, PipelineStage } from './models';
 
 @Injectable({
   providedIn: 'root',
@@ -24,6 +24,10 @@ export class CrmApi {
       params['pipelineStageId'] = pipelineStageId;
     }
     return this.http.get<Lead[]>('/api/leads', { params });
+  }
+
+  getLead(id: string) {
+    return this.http.get<Lead>(`/api/leads/${id}`);
   }
 
   createLead(payload: {
@@ -56,5 +60,14 @@ export class CrmApi {
     formData.append('file', file);
     formData.append('pipelineStageId', pipelineStageId);
     return this.http.post<{ importedCount: number; errors: string[] }>('/api/leads/import', formData);
+  }
+
+  // Lead activity timeline
+  getLeadActivities(leadId: string) {
+    return this.http.get<LeadActivity[]>(`/api/leads/${leadId}/activities`);
+  }
+
+  createLeadActivity(leadId: string, payload: { content: string; type?: string }) {
+    return this.http.post<LeadActivity>(`/api/leads/${leadId}/activities`, payload);
   }
 }

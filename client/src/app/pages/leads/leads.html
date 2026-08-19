@@ -118,7 +118,10 @@
             <td>{{ lead.company }}</td>
             <td><span class="badge">{{ stageName(lead.pipelineStageId) }}</span></td>
             <td>{{ lead.source }}</td>
-            <td><button type="button" class="secondary" (click)="startEdit(lead)">Edit</button></td>
+            <td>
+              <a [routerLink]="['/leads', lead.id]">View</a>
+              <button type="button" class="secondary" (click)="startEdit(lead)">Edit</button>
+            </td>
           </tr>
         }
       } @empty {

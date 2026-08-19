@@ -10,6 +10,10 @@ export const routes: Routes = [
       { path: '', redirectTo: 'leads', pathMatch: 'full' },
       { path: 'leads', loadComponent: () => import('./pages/leads/leads').then((m) => m.Leads) },
       {
+        path: 'leads/:id',
+        loadComponent: () => import('./pages/leads/lead-detail/lead-detail').then((m) => m.LeadDetail),
+      },
+      {
         path: 'pipeline-stages',
         loadComponent: () => import('./pages/pipeline-stages/pipeline-stages').then((m) => m.PipelineStages),
       },

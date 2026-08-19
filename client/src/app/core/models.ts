@@ -17,6 +17,15 @@ export interface Lead {
   createdAtUtc: string;
 }
 
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: string;
+  content: string;
+  createdByUserId?: string | null;
+  createdAtUtc: string;
+}
+
 export interface AuthResult {
   token: string;
   expiresAtUtc: string;

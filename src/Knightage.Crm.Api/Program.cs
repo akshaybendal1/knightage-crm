@@ -47,6 +47,7 @@ builder.Services.AddScoped<DapperContext>();
 builder.Services.AddScoped<ITenantDatabaseResolver, PlatformTenantDatabaseResolver>();
 builder.Services.AddScoped<IPipelineStageRepository, PipelineStageRepository>();
 builder.Services.AddScoped<ILeadRepository, LeadRepository>();
+builder.Services.AddScoped<ILeadActivityRepository, LeadActivityRepository>();
 builder.Services.AddScoped<ILeadImportParser, CsvLeadImportParser>();
 
 var platformBaseUrl = builder.Configuration["Services:PlatformBaseUrl"]

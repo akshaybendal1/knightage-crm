@@ -1,11 +1,12 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { CrmApi } from '../../core/crm-api';
 import { Lead, PipelineStage } from '../../core/models';
 
 @Component({
   selector: 'app-leads',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './leads.html',
   styleUrl: './leads.css',
 })
