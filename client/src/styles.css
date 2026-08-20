@@ -68,10 +68,11 @@ th {
 .field input,
 .field select,
 .field textarea {
-  padding: 0.4rem 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
   border: 1px solid #d1d5db;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 button {
@@ -79,8 +80,8 @@ button {
   color: #fff;
   border: none;
   border-radius: 4px;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.875rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 
@@ -133,4 +134,12 @@ button.secondary:hover {
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
+}
+
+.forms-row .card {
+  /* Without an explicit basis, a flex item with no width sizes to its content's
+     intrinsic (shrink-to-fit) width instead of filling the row -- barely visible
+     with two cards side by side on desktop, but leaves a lone card stranded in a
+     third of the screen on mobile. */
+  flex: 1 1 280px;
 }
