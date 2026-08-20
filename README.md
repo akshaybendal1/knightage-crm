@@ -35,7 +35,9 @@ Backend and Angular frontend built together in one pass (unlike `knightage-accou
 
 ## Data model
 
-`sql/001_init.sql` creates `PipelineStages` and `Leads`. Run it by hand against your local SQL Server instance until `knightage-platform`'s migration orchestration takes over.
+`sql/001_init.sql` creates `PipelineStages` and `Leads`; `sql/002_lead_activities.sql` adds `LeadActivities`. Run them by hand against your local SQL Server instance until `knightage-platform`'s migration orchestration takes over.
+
+`sql/seed_sample_data.sql` is optional: run it against a specific tenant's database to populate a few pipeline stages, leads, and activity notes for local testing. It's not applied during tenant provisioning, so real organizations never see this fake data.
 
 ## Auth
 
