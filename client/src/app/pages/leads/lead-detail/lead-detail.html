@@ -36,8 +36,9 @@
     @for (activity of activities(); track activity.id) {
       <li class="timeline-item">
         <div class="timeline-meta">
-          <span class="badge">{{ activity.type }}</span>
-          <span class="hint">{{ activity.createdAtUtc | date: 'medium' }}</span>
+          <span class="badge" [class]="activityTypeClass(activity.type)">{{ activityTypeLabel(activity.type) }}</span>
+          <span class="hint">{{ authorLabel(activity) }}</span>
+          <span class="hint" [title]="activity.createdAtUtc | date: 'medium'">{{ timeAgo(activity.createdAtUtc) }}</span>
         </div>
         <p>{{ activity.content }}</p>
       </li>
@@ -45,4 +46,10 @@
       <li class="hint">No activity yet — add the first note above.</li>
     }
   </ul>
+
+  @if (hasMoreActivities()) {
+    <button type="button" class="secondary" [disabled]="loadingMoreActivities()" (click)="loadMoreActivities()">
+      {{ loadingMoreActivities() ? 'Loading...' : 'Load more' }}
+    </button>
+  }
 }

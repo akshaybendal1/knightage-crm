@@ -1,4 +1,5 @@
 using System.Text;
+using Dapper;
 using Knightage.Crm.Api.Middleware;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Tenancy;
@@ -9,6 +10,8 @@ using Knightage.Crm.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
+SqlMapper.AddTypeHandler(new UtcDateTimeHandler());
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {

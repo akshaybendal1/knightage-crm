@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Lead, LeadActivity, PipelineStage } from './models';
+import { Lead, LeadActivity, PagedActivities, PipelineStage } from './models';
 
 @Injectable({
   providedIn: 'root',
@@ -63,8 +63,10 @@ export class CrmApi {
   }
 
   // Lead activity timeline
-  getLeadActivities(leadId: string) {
-    return this.http.get<LeadActivity[]>(`/api/leads/${leadId}/activities`);
+  getLeadActivities(leadId: string, page = 1, pageSize = 20) {
+    return this.http.get<PagedActivities>(`/api/leads/${leadId}/activities`, {
+      params: { page, pageSize },
+    });
   }
 
   createLeadActivity(leadId: string, payload: { content: string; type?: string }) {

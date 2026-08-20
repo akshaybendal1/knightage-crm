@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
@@ -14,12 +15,18 @@ public class LeadsController : ControllerBase
     private readonly ILeadRepository _leadRepository;
     private readonly ILeadImportParser _importParser;
     private readonly ILeadActivityRepository _activityRepository;
+    private readonly IPipelineStageRepository _stageRepository;
 
-    public LeadsController(ILeadRepository leadRepository, ILeadImportParser importParser, ILeadActivityRepository activityRepository)
+    public LeadsController(
+        ILeadRepository leadRepository,
+        ILeadImportParser importParser,
+        ILeadActivityRepository activityRepository,
+        IPipelineStageRepository stageRepository)
     {
         _leadRepository = leadRepository;
         _importParser = importParser;
         _activityRepository = activityRepository;
+        _stageRepository = stageRepository;
     }
 
     [HttpGet]
@@ -49,6 +56,15 @@ public class LeadsController : ControllerBase
             CreatedAtUtc = DateTime.UtcNow
         };
         await _leadRepository.CreateAsync(lead);
+        await _activityRepository.CreateAsync(new LeadActivity
+        {
+            Id = Guid.NewGuid(),
+            LeadId = lead.Id,
+            Type = "LeadCreated",
+            Content = "Lead created manually",
+            CreatedByUserId = User.FindFirst("sub")?.Value,
+            CreatedAtUtc = lead.CreatedAtUtc
+        });
         return CreatedAtAction(nameof(GetById), new { id = lead.Id }, lead);
     }
 
@@ -61,6 +77,8 @@ public class LeadsController : ControllerBase
             return NotFound();
         }
 
+        var previousStageId = existing.PipelineStageId;
+
         existing.Name = request.Name;
         existing.Email = request.Email;
         existing.Phone = request.Phone;
@@ -69,6 +87,31 @@ public class LeadsController : ControllerBase
         existing.Notes = request.Notes;
 
         await _leadRepository.UpdateAsync(existing);
+
+        if (previousStageId != request.PipelineStageId)
+        {
+            var fromStage = await _stageRepository.GetByIdAsync(previousStageId);
+            var toStage = await _stageRepository.GetByIdAsync(request.PipelineStageId);
+            var metadata = JsonSerializer.Serialize(new
+            {
+                fromStageId = previousStageId,
+                fromStage = fromStage?.Name ?? "Unknown",
+                toStageId = request.PipelineStageId,
+                toStage = toStage?.Name ?? "Unknown"
+            });
+
+            await _activityRepository.CreateAsync(new LeadActivity
+            {
+                Id = Guid.NewGuid(),
+                LeadId = id,
+                Type = "StageChange",
+                Content = $"Moved from {fromStage?.Name ?? "Unknown"} to {toStage?.Name ?? "Unknown"}",
+                Metadata = metadata,
+                CreatedByUserId = User.FindFirst("sub")?.Value,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        }
+
         return Ok(existing);
     }
 
@@ -104,6 +147,16 @@ public class LeadsController : ControllerBase
         if (leads.Count > 0)
         {
             await _leadRepository.CreateManyAsync(leads);
+            var createdByUserId = User.FindFirst("sub")?.Value;
+            await _activityRepository.CreateManyAsync(leads.Select(lead => new LeadActivity
+            {
+                Id = Guid.NewGuid(),
+                LeadId = lead.Id,
+                Type = "LeadCreated",
+                Content = "Lead created via CSV import",
+                CreatedByUserId = createdByUserId,
+                CreatedAtUtc = lead.CreatedAtUtc
+            }));
         }
 
         return Ok(new
@@ -114,7 +167,7 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("{leadId:guid}/activities")]
-    public async Task<IActionResult> GetActivities(Guid leadId)
+    public async Task<IActionResult> GetActivities(Guid leadId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var lead = await _leadRepository.GetByIdAsync(leadId);
         if (lead is null)
@@ -122,7 +175,11 @@ public class LeadsController : ControllerBase
             return NotFound();
         }
 
-        return Ok(await _activityRepository.GetByLeadIdAsync(leadId));
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        var (items, hasMore) = await _activityRepository.GetByLeadIdAsync(leadId, page, pageSize);
+        return Ok(new { items, hasMore });
     }
 
     [HttpPost("{leadId:guid}/activities")]

@@ -22,8 +22,14 @@ export interface LeadActivity {
   leadId: string;
   type: string;
   content: string;
+  metadata?: string | null;
   createdByUserId?: string | null;
   createdAtUtc: string;
+}
+
+export interface PagedActivities {
+  items: LeadActivity[];
+  hasMore: boolean;
 }
 
 export interface AuthResult {
