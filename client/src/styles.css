@@ -143,3 +143,29 @@ button.secondary:hover {
      third of the screen on mobile. */
   flex: 1 1 280px;
 }
+
+/* Inline table-row edit inputs (leads, pipeline stages) sit directly in a <td>,
+   not inside a .field wrapper, so without this they fall back to the browser's
+   default text-input width (~180px) and blow the table out far wider than its
+   read-only layout. */
+td input[type='text'],
+td input[type='email'],
+td input[type='number'],
+td select {
+  width: 100%;
+  min-width: 90px;
+  max-width: 160px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+td input[type='checkbox'] {
+  width: auto;
+}
+
+td a + button,
+td button + button {
+  margin-left: 0.6rem;
+}
