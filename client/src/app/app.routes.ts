@@ -17,6 +17,7 @@ export const routes: Routes = [
         path: 'pipeline-stages',
         loadComponent: () => import('./pages/pipeline-stages/pipeline-stages').then((m) => m.PipelineStages),
       },
+      { path: 'tasks', loadComponent: () => import('./pages/tasks/tasks').then((m) => m.Tasks) },
     ],
   },
   { path: '**', redirectTo: '' },

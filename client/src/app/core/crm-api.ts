@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Lead, LeadActivity, PagedActivities, PipelineStage } from './models';
+import { Lead, LeadActivity, LeadTask, PagedActivities, PipelineStage } from './models';
 
 @Injectable({
   providedIn: 'root',
@@ -71,5 +71,26 @@ export class CrmApi {
 
   createLeadActivity(leadId: string, payload: { content: string; type?: string }) {
     return this.http.post<LeadActivity>(`/api/leads/${leadId}/activities`, payload);
+  }
+
+  // Tasks
+  getLeadTasks(leadId: string) {
+    return this.http.get<LeadTask[]>(`/api/leads/${leadId}/tasks`);
+  }
+
+  createTask(leadId: string, payload: { title: string; description?: string; dueDate: string; assignedToUserId?: string }) {
+    return this.http.post<LeadTask>(`/api/leads/${leadId}/tasks`, payload);
+  }
+
+  getMyTasks(status?: string) {
+    const params: Record<string, string> = {};
+    if (status) {
+      params['status'] = status;
+    }
+    return this.http.get<LeadTask[]>('/api/tasks', { params });
+  }
+
+  updateTaskStatus(id: string, status: 'Open' | 'Completed') {
+    return this.http.put<LeadTask>(`/api/tasks/${id}`, { status });
   }
 }

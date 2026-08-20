@@ -32,6 +32,26 @@ export interface PagedActivities {
   hasMore: boolean;
 }
 
+export interface LeadTask {
+  id: string;
+  leadId: string;
+  title: string;
+  description?: string | null;
+  dueDate: string;
+  status: 'Open' | 'Completed';
+  assignedToUserId: string;
+  createdByUserId?: string | null;
+  createdAtUtc: string;
+  completedAtUtc?: string | null;
+  leadName?: string | null;
+}
+
+export interface OrgUser {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
 export interface AuthResult {
   token: string;
   expiresAtUtc: string;

@@ -16,17 +16,20 @@ public class LeadsController : ControllerBase
     private readonly ILeadImportParser _importParser;
     private readonly ILeadActivityRepository _activityRepository;
     private readonly IPipelineStageRepository _stageRepository;
+    private readonly ILeadTaskRepository _taskRepository;
 
     public LeadsController(
         ILeadRepository leadRepository,
         ILeadImportParser importParser,
         ILeadActivityRepository activityRepository,
-        IPipelineStageRepository stageRepository)
+        IPipelineStageRepository stageRepository,
+        ILeadTaskRepository taskRepository)
     {
         _leadRepository = leadRepository;
         _importParser = importParser;
         _activityRepository = activityRepository;
         _stageRepository = stageRepository;
+        _taskRepository = taskRepository;
     }
 
     [HttpGet]
@@ -202,5 +205,43 @@ public class LeadsController : ControllerBase
         };
         await _activityRepository.CreateAsync(activity);
         return CreatedAtAction(nameof(GetActivities), new { leadId }, activity);
+    }
+
+    [HttpGet("{leadId:guid}/tasks")]
+    public async Task<IActionResult> GetTasks(Guid leadId)
+    {
+        var lead = await _leadRepository.GetByIdAsync(leadId);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(await _taskRepository.GetByLeadIdAsync(leadId));
+    }
+
+    [HttpPost("{leadId:guid}/tasks")]
+    public async Task<IActionResult> CreateTask(Guid leadId, CreateTaskRequest request)
+    {
+        var lead = await _leadRepository.GetByIdAsync(leadId);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        var currentUserId = User.FindFirst("sub")?.Value;
+        var task = new LeadTask
+        {
+            Id = Guid.NewGuid(),
+            LeadId = leadId,
+            Title = request.Title,
+            Description = request.Description,
+            DueDate = request.DueDate.Date,
+            Status = "Open",
+            AssignedToUserId = string.IsNullOrWhiteSpace(request.AssignedToUserId) ? currentUserId ?? string.Empty : request.AssignedToUserId,
+            CreatedByUserId = currentUserId,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        await _taskRepository.CreateAsync(task);
+        return CreatedAtAction(nameof(GetTasks), new { leadId }, task);
     }
 }

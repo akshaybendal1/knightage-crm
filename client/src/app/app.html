@@ -3,6 +3,12 @@
     <span class="brand">Knightage CRM</span>
     <a routerLink="/leads" routerLinkActive="active">Leads</a>
     <a routerLink="/pipeline-stages" routerLinkActive="active">Pipeline Stages</a>
+    <a routerLink="/tasks" routerLinkActive="active">
+      Tasks
+      @if (dueTaskCount() > 0) {
+        <span class="badge-count">{{ dueTaskCount() }}</span>
+      }
+    </a>
     <span class="spacer"></span>
     <span class="user">{{ auth.currentUser()?.displayName }}</span>
     <button type="button" (click)="auth.logout()">Logout</button>

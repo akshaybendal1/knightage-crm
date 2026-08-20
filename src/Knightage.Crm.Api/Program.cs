@@ -51,6 +51,7 @@ builder.Services.AddScoped<ITenantDatabaseResolver, PlatformTenantDatabaseResolv
 builder.Services.AddScoped<IPipelineStageRepository, PipelineStageRepository>();
 builder.Services.AddScoped<ILeadRepository, LeadRepository>();
 builder.Services.AddScoped<ILeadActivityRepository, LeadActivityRepository>();
+builder.Services.AddScoped<ILeadTaskRepository, LeadTaskRepository>();
 builder.Services.AddScoped<ILeadImportParser, CsvLeadImportParser>();
 
 var platformBaseUrl = builder.Configuration["Services:PlatformBaseUrl"]

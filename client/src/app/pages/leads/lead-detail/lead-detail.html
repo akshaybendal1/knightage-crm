@@ -20,6 +20,62 @@
     }
   </div>
 
+  <h2>Tasks</h2>
+
+  <ul class="task-list">
+    @for (task of tasks(); track task.id) {
+      <li class="task-item" [class.completed]="task.status === 'Completed'">
+        <input
+          type="checkbox"
+          [checked]="task.status === 'Completed'"
+          (change)="toggleTaskComplete(task)"
+        />
+        <div>
+          <div class="task-title">{{ task.title }}</div>
+          @if (task.description) {
+            <div class="hint">{{ task.description }}</div>
+          }
+          <div class="hint">
+            Due <span [class.overdue]="isOverdue(task)" class="task-due">{{ task.dueDate | date: 'mediumDate' }}</span>
+            &middot; Assigned to {{ assigneeLabel(task.assignedToUserId) }}
+          </div>
+        </div>
+      </li>
+    } @empty {
+      <li class="hint">No tasks yet.</li>
+    }
+  </ul>
+
+  <form class="card" (ngSubmit)="addTask()">
+    <h3>Add task</h3>
+    <div class="field">
+      <label for="taskTitle">Title</label>
+      <input id="taskTitle" name="taskTitle" type="text" [(ngModel)]="newTaskTitle" required />
+    </div>
+    <div class="field">
+      <label for="taskDueDate">Due date</label>
+      <input id="taskDueDate" name="taskDueDate" type="date" [(ngModel)]="newTaskDueDate" required />
+    </div>
+    <div class="field">
+      <label for="taskDescription">Description</label>
+      <textarea id="taskDescription" name="taskDescription" rows="2" [(ngModel)]="newTaskDescription"></textarea>
+    </div>
+    <div class="field">
+      <label for="taskAssignee">Assign to</label>
+      <select id="taskAssignee" name="taskAssignee" [(ngModel)]="newTaskAssigneeId">
+        <option [value]="auth.currentUser()?.userId">Me</option>
+        @for (u of orgUsers(); track u.id) {
+          @if (u.id !== auth.currentUser()?.userId) {
+            <option [value]="u.id">{{ u.displayName }}</option>
+          }
+        }
+      </select>
+    </div>
+    <button type="submit" [disabled]="savingTask() || !newTaskTitle.trim() || !newTaskDueDate">
+      {{ savingTask() ? 'Saving...' : 'Add task' }}
+    </button>
+  </form>
+
   <h2>Activity timeline</h2>
 
   <form class="card" (ngSubmit)="addNote()">

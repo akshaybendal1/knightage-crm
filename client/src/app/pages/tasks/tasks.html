@@ -1,0 +1,31 @@
+<h1>My Tasks</h1>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+
+@if (loading()) {
+  <p class="hint">Loading...</p>
+} @else {
+  <ul class="task-list">
+    @for (task of tasks(); track task.id) {
+      <li class="task-item" [class.overdue]="isOverdue(task)">
+        <input type="checkbox" (change)="completeTask(task)" />
+        <div>
+          <div class="task-title">
+            {{ task.title }}
+            <a [routerLink]="['/leads', task.leadId]" class="hint">({{ task.leadName }})</a>
+          </div>
+          @if (task.description) {
+            <div class="hint">{{ task.description }}</div>
+          }
+          <div class="task-due" [class.overdue]="isOverdue(task)">
+            Due {{ task.dueDate | date: 'mediumDate' }}
+          </div>
+        </div>
+      </li>
+    } @empty {
+      <li class="hint">No open tasks. You're all caught up.</li>
+    }
+  </ul>
+}
