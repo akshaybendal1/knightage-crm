@@ -16,6 +16,14 @@ export class PipelineStages implements OnInit {
 
   name = '';
   sortOrder = 1;
+  isWon = false;
+  isLost = false;
+
+  editingId = signal<string | null>(null);
+  editName = '';
+  editSortOrder = 1;
+  editIsWon = false;
+  editIsLost = false;
 
   constructor(private readonly api: CrmApi) {}
 
@@ -39,13 +47,44 @@ export class PipelineStages implements OnInit {
 
   createStage(): void {
     this.errorMessage.set(null);
-    this.api.createPipelineStage({ name: this.name, sortOrder: this.sortOrder }).subscribe({
+    this.api.createPipelineStage({ name: this.name, sortOrder: this.sortOrder, isWon: this.isWon, isLost: this.isLost }).subscribe({
       next: () => {
         this.name = '';
         this.sortOrder = this.stages().length + 1;
+        this.isWon = false;
+        this.isLost = false;
         this.load();
       },
       error: () => this.errorMessage.set('Could not create pipeline stage.'),
     });
+  }
+
+  startEdit(stage: PipelineStage): void {
+    this.editingId.set(stage.id);
+    this.editName = stage.name;
+    this.editSortOrder = stage.sortOrder;
+    this.editIsWon = stage.isWon;
+    this.editIsLost = stage.isLost;
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+  }
+
+  saveEdit(id: string): void {
+    this.api
+      .updatePipelineStage(id, {
+        name: this.editName,
+        sortOrder: this.editSortOrder,
+        isWon: this.editIsWon,
+        isLost: this.editIsLost,
+      })
+      .subscribe({
+        next: () => {
+          this.editingId.set(null);
+          this.load();
+        },
+        error: () => this.errorMessage.set('Could not save changes.'),
+      });
   }
 }

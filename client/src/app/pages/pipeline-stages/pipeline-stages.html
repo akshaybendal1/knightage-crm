@@ -10,6 +10,10 @@
     <label for="sortOrder">Sort order</label>
     <input id="sortOrder" name="sortOrder" type="number" [(ngModel)]="sortOrder" required />
   </div>
+  <div class="field checkbox-field">
+    <label><input type="checkbox" name="isWon" [(ngModel)]="isWon" /> Counts as Won</label>
+    <label><input type="checkbox" name="isLost" [(ngModel)]="isLost" /> Counts as Lost</label>
+  </div>
   @if (errorMessage()) {
     <p class="error">{{ errorMessage() }}</p>
   }
@@ -19,24 +23,45 @@
 @if (loading()) {
   <p class="hint">Loading...</p>
 } @else {
+  <div class="table-scroll">
   <table>
     <thead>
       <tr>
         <th>Name</th>
         <th>Sort order</th>
+        <th>Won</th>
+        <th>Lost</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       @for (stage of stages(); track stage.id) {
-        <tr>
-          <td>{{ stage.name }}</td>
-          <td>{{ stage.sortOrder }}</td>
-        </tr>
+        @if (editingId() === stage.id) {
+          <tr>
+            <td><input type="text" [(ngModel)]="editName" name="editName-{{ stage.id }}" /></td>
+            <td><input type="number" [(ngModel)]="editSortOrder" name="editSortOrder-{{ stage.id }}" /></td>
+            <td><input type="checkbox" [(ngModel)]="editIsWon" name="editIsWon-{{ stage.id }}" /></td>
+            <td><input type="checkbox" [(ngModel)]="editIsLost" name="editIsLost-{{ stage.id }}" /></td>
+            <td>
+              <button type="button" (click)="saveEdit(stage.id)">Save</button>
+              <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+            </td>
+          </tr>
+        } @else {
+          <tr>
+            <td>{{ stage.name }}</td>
+            <td>{{ stage.sortOrder }}</td>
+            <td>{{ stage.isWon ? 'Yes' : '—' }}</td>
+            <td>{{ stage.isLost ? 'Yes' : '—' }}</td>
+            <td><button type="button" class="secondary" (click)="startEdit(stage)">Edit</button></td>
+          </tr>
+        }
       } @empty {
         <tr>
-          <td colspan="2" class="hint">No pipeline stages yet.</td>
+          <td colspan="5" class="hint">No pipeline stages yet.</td>
         </tr>
       }
     </tbody>
   </table>
+  </div>
 }

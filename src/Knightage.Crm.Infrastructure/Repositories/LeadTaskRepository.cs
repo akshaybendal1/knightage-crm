@@ -24,13 +24,13 @@ public class LeadTaskRepository : ILeadTaskRepository
         return tasks.ToList();
     }
 
-    public async Task<IReadOnlyList<LeadTask>> GetByAssigneeAsync(string assignedToUserId, string? status)
+    public async Task<IReadOnlyList<LeadTask>> GetByAssigneeAsync(string? assignedToUserId, string? status)
     {
         var sql = @"SELECT t.Id, t.LeadId, t.Title, t.Description, t.DueDate, t.Status, t.AssignedToUserId,
                             t.CreatedByUserId, t.CreatedAtUtc, t.CompletedAtUtc, l.Name AS LeadName
                      FROM Tasks t
                      JOIN Leads l ON l.Id = t.LeadId
-                     WHERE t.AssignedToUserId = @AssignedToUserId";
+                     WHERE (@AssignedToUserId IS NULL OR t.AssignedToUserId = @AssignedToUserId)";
         if (!string.IsNullOrWhiteSpace(status))
         {
             sql += " AND t.Status = @Status";

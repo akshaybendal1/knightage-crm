@@ -21,8 +21,16 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetTasks([FromQuery] string? assignedToUserId, [FromQuery] string? status)
+    public async Task<IActionResult> GetTasks([FromQuery] string? assignedToUserId, [FromQuery] string? status, [FromQuery] bool all = false)
     {
+        // "all" is the manager/dashboard drill-down view (every user's tasks in this
+        // tenant) -- there's no roles/permissions model yet to gate this behind, same
+        // as every other endpoint in this service.
+        if (all)
+        {
+            return Ok(await _taskRepository.GetByAssigneeAsync(null, status));
+        }
+
         var currentUserId = User.FindFirst("sub")?.Value;
         var targetUserId = string.IsNullOrWhiteSpace(assignedToUserId) ? currentUserId : assignedToUserId;
         if (string.IsNullOrWhiteSpace(targetUserId))

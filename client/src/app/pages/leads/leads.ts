@@ -1,6 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { CrmApi } from '../../core/crm-api';
 import { Lead, PipelineStage } from '../../core/models';
 
@@ -41,9 +41,13 @@ export class Leads implements OnInit {
   editStageId = '';
   editNotes = '';
 
-  constructor(private readonly api: CrmApi) {}
+  constructor(
+    private readonly api: CrmApi,
+    private readonly route: ActivatedRoute,
+  ) {}
 
   ngOnInit(): void {
+    this.filterStageId = this.route.snapshot.queryParamMap.get('pipelineStageId') ?? '';
     this.api.getPipelineStages().subscribe((stages) => this.stages.set(stages));
     this.loadLeads();
   }

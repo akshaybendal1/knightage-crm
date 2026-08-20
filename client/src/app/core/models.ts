@@ -3,6 +3,8 @@ export interface PipelineStage {
   name: string;
   sortOrder: number;
   isActive: boolean;
+  isWon: boolean;
+  isLost: boolean;
 }
 
 export interface Lead {
@@ -50,6 +52,19 @@ export interface OrgUser {
   id: string;
   displayName: string;
   email: string;
+}
+
+export interface PipelineSummaryItem {
+  stageId: string;
+  stageName: string;
+  sortOrder: number;
+  leadCount: number;
+}
+
+export interface WonLostSummary {
+  won: number;
+  lost: number;
+  range: string;
 }
 
 export interface AuthResult {

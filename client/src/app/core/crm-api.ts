@@ -1,6 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Lead, LeadActivity, LeadTask, PagedActivities, PipelineStage } from './models';
+import {
+  Lead,
+  LeadActivity,
+  LeadTask,
+  PagedActivities,
+  PipelineStage,
+  PipelineSummaryItem,
+  WonLostSummary,
+} from './models';
 
 @Injectable({
   providedIn: 'root',
@@ -13,8 +21,12 @@ export class CrmApi {
     return this.http.get<PipelineStage[]>('/api/pipeline-stages');
   }
 
-  createPipelineStage(payload: { name: string; sortOrder: number }) {
+  createPipelineStage(payload: { name: string; sortOrder: number; isWon?: boolean; isLost?: boolean }) {
     return this.http.post<PipelineStage>('/api/pipeline-stages', payload);
+  }
+
+  updatePipelineStage(id: string, payload: { name: string; sortOrder: number; isWon: boolean; isLost: boolean }) {
+    return this.http.put<PipelineStage>(`/api/pipeline-stages/${id}`, payload);
   }
 
   // Leads
@@ -82,15 +94,35 @@ export class CrmApi {
     return this.http.post<LeadTask>(`/api/leads/${leadId}/tasks`, payload);
   }
 
-  getMyTasks(status?: string) {
+  getMyTasks(status?: string, all = false) {
     const params: Record<string, string> = {};
     if (status) {
       params['status'] = status;
+    }
+    if (all) {
+      params['all'] = 'true';
     }
     return this.http.get<LeadTask[]>('/api/tasks', { params });
   }
 
   updateTaskStatus(id: string, status: 'Open' | 'Completed') {
     return this.http.put<LeadTask>(`/api/tasks/${id}`, { status });
+  }
+
+  // Dashboard
+  getPipelineSummary() {
+    return this.http.get<PipelineSummaryItem[]>('/api/dashboard/pipeline-summary');
+  }
+
+  getWonLostSummary(range: 'week' | 'month' | 'all') {
+    return this.http.get<WonLostSummary>('/api/dashboard/won-lost', { params: { range } });
+  }
+
+  getActivitySummary() {
+    return this.http.get<{ count: number }>('/api/dashboard/activity-summary');
+  }
+
+  getOverdueTaskCount() {
+    return this.http.get<{ count: number }>('/api/dashboard/overdue-tasks');
   }
 }

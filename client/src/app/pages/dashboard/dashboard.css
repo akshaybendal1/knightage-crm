@@ -1,0 +1,119 @@
+.pipeline-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pipeline-name {
+  flex: 0 0 120px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-bar-track {
+  flex: 1 1 auto;
+  min-width: 60px;
+  height: 0.85rem;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pipeline-bar-fill {
+  display: block;
+  height: 100%;
+  background: #2563eb;
+  border-radius: 999px;
+}
+
+.pipeline-count {
+  flex: 0 0 2.5rem;
+  text-align: right;
+  font-weight: 600;
+}
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.stat-card {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.stat-card.clickable {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: box-shadow 0.15s;
+}
+
+.stat-card.clickable:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.range-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.range-toggle button {
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.65rem;
+}
+
+.range-toggle button.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.stat-pair {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-tile.won .stat-value {
+  color: #166534;
+}
+
+.stat-tile.lost .stat-value {
+  color: #b91c1c;
+}
+
+.stat-tile.overdue .stat-value {
+  color: #b91c1c;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+}

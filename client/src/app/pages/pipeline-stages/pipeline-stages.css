@@ -1,0 +1,16 @@
+.table-scroll {
+  overflow-x: auto;
+}
+
+.checkbox-field {
+  flex-direction: row;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 400;
+}

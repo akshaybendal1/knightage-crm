@@ -7,4 +7,5 @@ public interface IPipelineStageRepository
     Task<IReadOnlyList<PipelineStage>> GetActiveAsync();
     Task<PipelineStage?> GetByIdAsync(Guid id);
     Task<PipelineStage> CreateAsync(PipelineStage stage);
+    Task UpdateAsync(PipelineStage stage);
 }

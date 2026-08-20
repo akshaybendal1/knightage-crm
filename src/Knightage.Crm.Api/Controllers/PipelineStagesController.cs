@@ -29,9 +29,29 @@ public class PipelineStagesController : ControllerBase
             Id = Guid.NewGuid(),
             Name = request.Name,
             SortOrder = request.SortOrder,
-            IsActive = true
+            IsActive = true,
+            IsWon = request.IsWon,
+            IsLost = request.IsLost
         };
         await _repository.CreateAsync(stage);
         return Ok(stage);
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, PipelineStageRequest request)
+    {
+        var existing = await _repository.GetByIdAsync(id);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        existing.Name = request.Name;
+        existing.SortOrder = request.SortOrder;
+        existing.IsWon = request.IsWon;
+        existing.IsLost = request.IsLost;
+
+        await _repository.UpdateAsync(existing);
+        return Ok(existing);
     }
 }
