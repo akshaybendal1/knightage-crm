@@ -169,3 +169,17 @@ td a + button,
 td button + button {
   margin-left: 0.6rem;
 }
+
+/* The actions cell (View/Edit, Save/Cancel) is the last column and has no
+   explicit width, so once two buttons plus their margin exceed it, they wrap
+   onto separate lines instead of staying aligned on one row. The table
+   already scrolls horizontally (.table-scroll), so keep this cell on one
+   line and let that scroll handle overflow instead of wrapping unpredictably. */
+tr td:last-child {
+  white-space: nowrap;
+}
+
+td button {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+}
