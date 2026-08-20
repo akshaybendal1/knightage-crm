@@ -76,7 +76,8 @@ export class LeadDetail implements OnInit {
     if (activity.createdByUserId === this.auth.currentUser()?.userId) {
       return 'You';
     }
-    return `User ${activity.createdByUserId.slice(0, 8)}`;
+    const user = this.orgUsers().find((u) => u.id === activity.createdByUserId);
+    return user?.displayName ?? `User ${activity.createdByUserId.slice(0, 8)}`;
   }
 
   activityTypeClass(type: string): string {
