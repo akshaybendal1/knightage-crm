@@ -16,7 +16,7 @@
 }
 
 .task-item.overdue {
-  border-left: 3px solid #b91c1c;
+  border-left: 3px solid #fd3369;
 }
 
 .task-title {
@@ -24,6 +24,6 @@
 }
 
 .task-due.overdue {
-  color: #b91c1c;
+  color: #fd3369;
   font-weight: 600;
 }

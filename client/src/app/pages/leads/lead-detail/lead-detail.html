@@ -1,26 +1,30 @@
-<a routerLink="/leads" class="hint">&larr; Back to leads</a>
+<a routerLink="/leads" class="text-muted d-inline-block mb-2">&larr; Back to leads</a>
 
 @if (errorMessage()) {
-  <p class="error">{{ errorMessage() }}</p>
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
 }
 
 @if (loading()) {
-  <p class="hint">Loading...</p>
+  <p class="text-muted">Loading...</p>
 } @else if (lead(); as l) {
-  <h1>{{ l.name }}</h1>
+  <h3 class="fw-bold mb-3">{{ l.name }}</h3>
 
-  <div class="card lead-summary">
-    <div><span class="label">Email</span> {{ l.email || '—' }}</div>
-    <div><span class="label">Phone</span> {{ l.phone || '—' }}</div>
-    <div><span class="label">Company</span> {{ l.company || '—' }}</div>
-    <div><span class="label">Stage</span> <span class="badge">{{ stageName(l.pipelineStageId) }}</span></div>
-    <div><span class="label">Source</span> {{ l.source }}</div>
-    @if (l.notes) {
-      <div><span class="label">Notes</span> {{ l.notes }}</div>
-    }
+  <div class="card card-round mb-4">
+    <div class="card-body">
+      <div class="lead-summary">
+        <div><span class="label">Email</span> {{ l.email || '—' }}</div>
+        <div><span class="label">Phone</span> {{ l.phone || '—' }}</div>
+        <div><span class="label">Company</span> {{ l.company || '—' }}</div>
+        <div><span class="label">Stage</span> <span class="badge badge-primary">{{ stageName(l.pipelineStageId) }}</span></div>
+        <div><span class="label">Source</span> {{ l.source }}</div>
+        @if (l.notes) {
+          <div><span class="label">Notes</span> {{ l.notes }}</div>
+        }
+      </div>
+    </div>
   </div>
 
-  <h2>Tasks</h2>
+  <h4 class="fw-bold mb-3">Tasks</h4>
 
   <ul class="task-list">
     @for (task of tasks(); track task.id) {
@@ -33,78 +37,88 @@
         <div>
           <div class="task-title">{{ task.title }}</div>
           @if (task.description) {
-            <div class="hint">{{ task.description }}</div>
+            <div class="text-muted small">{{ task.description }}</div>
           }
-          <div class="hint">
+          <div class="text-muted small">
             Due <span [class.overdue]="isOverdue(task)" class="task-due">{{ task.dueDate | date: 'mediumDate' }}</span>
             &middot; Assigned to {{ assigneeLabel(task.assignedToUserId) }}
           </div>
         </div>
       </li>
     } @empty {
-      <li class="hint">No tasks yet.</li>
+      <li class="text-muted">No tasks yet.</li>
     }
   </ul>
 
-  <form class="card" (ngSubmit)="addTask()">
-    <h3>Add task</h3>
-    <div class="field">
-      <label for="taskTitle">Title</label>
-      <input id="taskTitle" name="taskTitle" type="text" [(ngModel)]="newTaskTitle" required />
+  <div class="card card-round mb-4">
+    <div class="card-header">
+      <div class="card-title">Add task</div>
     </div>
-    <div class="field">
-      <label for="taskDueDate">Due date</label>
-      <input id="taskDueDate" name="taskDueDate" type="date" [(ngModel)]="newTaskDueDate" required />
+    <div class="card-body">
+      <form (ngSubmit)="addTask()">
+        <div class="form-group mb-3">
+          <label class="form-label" for="taskTitle">Title</label>
+          <input id="taskTitle" name="taskTitle" type="text" class="form-control" [(ngModel)]="newTaskTitle" required />
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label" for="taskDueDate">Due date</label>
+          <input id="taskDueDate" name="taskDueDate" type="date" class="form-control" [(ngModel)]="newTaskDueDate" required />
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label" for="taskDescription">Description</label>
+          <textarea id="taskDescription" name="taskDescription" rows="2" class="form-control" [(ngModel)]="newTaskDescription"></textarea>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label" for="taskAssignee">Assign to</label>
+          <select id="taskAssignee" name="taskAssignee" class="form-select" [(ngModel)]="newTaskAssigneeId">
+            <option [value]="auth.currentUser()?.userId">Me</option>
+            @for (u of orgUsers(); track u.id) {
+              @if (u.id !== auth.currentUser()?.userId) {
+                <option [value]="u.id">{{ u.displayName }}</option>
+              }
+            }
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" [disabled]="savingTask() || !newTaskTitle.trim() || !newTaskDueDate">
+          {{ savingTask() ? 'Saving...' : 'Add task' }}
+        </button>
+      </form>
     </div>
-    <div class="field">
-      <label for="taskDescription">Description</label>
-      <textarea id="taskDescription" name="taskDescription" rows="2" [(ngModel)]="newTaskDescription"></textarea>
-    </div>
-    <div class="field">
-      <label for="taskAssignee">Assign to</label>
-      <select id="taskAssignee" name="taskAssignee" [(ngModel)]="newTaskAssigneeId">
-        <option [value]="auth.currentUser()?.userId">Me</option>
-        @for (u of orgUsers(); track u.id) {
-          @if (u.id !== auth.currentUser()?.userId) {
-            <option [value]="u.id">{{ u.displayName }}</option>
-          }
-        }
-      </select>
-    </div>
-    <button type="submit" [disabled]="savingTask() || !newTaskTitle.trim() || !newTaskDueDate">
-      {{ savingTask() ? 'Saving...' : 'Add task' }}
-    </button>
-  </form>
+  </div>
 
-  <h2>Activity timeline</h2>
+  <h4 class="fw-bold mb-3">Activity timeline</h4>
 
-  <form class="card" (ngSubmit)="addNote()">
-    <div class="field">
-      <label for="newNote">Add a note</label>
-      <textarea id="newNote" name="newNote" rows="3" [(ngModel)]="newNote" required></textarea>
+  <div class="card card-round mb-4">
+    <div class="card-body">
+      <form (ngSubmit)="addNote()">
+        <div class="form-group mb-3">
+          <label class="form-label" for="newNote">Add a note</label>
+          <textarea id="newNote" name="newNote" rows="3" class="form-control" [(ngModel)]="newNote" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" [disabled]="savingNote() || !newNote.trim()">
+          {{ savingNote() ? 'Saving...' : 'Add note' }}
+        </button>
+      </form>
     </div>
-    <button type="submit" [disabled]="savingNote() || !newNote.trim()">
-      {{ savingNote() ? 'Saving...' : 'Add note' }}
-    </button>
-  </form>
+  </div>
 
   <ul class="timeline">
     @for (activity of activities(); track activity.id) {
       <li class="timeline-item">
         <div class="timeline-meta">
           <span class="badge" [class]="activityTypeClass(activity.type)">{{ activityTypeLabel(activity.type) }}</span>
-          <span class="hint">{{ authorLabel(activity) }}</span>
-          <span class="hint" [title]="activity.createdAtUtc | date: 'medium'">{{ timeAgo(activity.createdAtUtc) }}</span>
+          <span class="text-muted small">{{ authorLabel(activity) }}</span>
+          <span class="text-muted small" [title]="activity.createdAtUtc | date: 'medium'">{{ timeAgo(activity.createdAtUtc) }}</span>
         </div>
         <p>{{ activity.content }}</p>
       </li>
     } @empty {
-      <li class="hint">No activity yet — add the first note above.</li>
+      <li class="text-muted">No activity yet — add the first note above.</li>
     }
   </ul>
 
   @if (hasMoreActivities()) {
-    <button type="button" class="secondary" [disabled]="loadingMoreActivities()" (click)="loadMoreActivities()">
+    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="loadingMoreActivities()" (click)="loadMoreActivities()">
       {{ loadingMoreActivities() ? 'Loading...' : 'Load more' }}
     </button>
   }

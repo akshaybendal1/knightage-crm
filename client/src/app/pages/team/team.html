@@ -1,90 +1,114 @@
-<h1>Team</h1>
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+  <div>
+    <h3 class="fw-bold mb-0">Team</h3>
+  </div>
+</div>
 
-<form class="card" (ngSubmit)="addMember()">
-  <h2>Add teammate</h2>
-  <div class="field">
-    <label for="displayName">Name</label>
-    <input id="displayName" name="displayName" type="text" [(ngModel)]="displayName" required />
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">Add teammate</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="addMember()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="displayName">Name</label>
+            <input id="displayName" name="displayName" type="text" class="form-control" [(ngModel)]="displayName" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="email">Email</label>
+            <input id="email" name="email" type="email" class="form-control" [(ngModel)]="email" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="password">Initial password</label>
+            <input id="password" name="password" type="password" class="form-control" [(ngModel)]="password" required minlength="8" />
+            <span class="text-muted small">At least 8 characters. Share it with them directly -- there's no invite email yet.</span>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="role">Role</label>
+            <select id="role" name="role" class="form-select" [(ngModel)]="role" required>
+              <option value="Member">Member</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          @if (errorMessage()) {
+            <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="adding()">{{ adding() ? 'Adding...' : 'Add teammate' }}</button>
+        </form>
+      </div>
+    </div>
   </div>
-  <div class="field">
-    <label for="email">Email</label>
-    <input id="email" name="email" type="email" [(ngModel)]="email" required />
-  </div>
-  <div class="field">
-    <label for="password">Initial password</label>
-    <input id="password" name="password" type="password" [(ngModel)]="password" required minlength="8" />
-    <span class="hint">At least 8 characters. Share it with them directly -- there's no invite email yet.</span>
-  </div>
-  <div class="field">
-    <label for="role">Role</label>
-    <select id="role" name="role" [(ngModel)]="role" required>
-      <option value="Member">Member</option>
-      <option value="Admin">Admin</option>
-    </select>
-  </div>
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
-  }
-  <button type="submit" [disabled]="adding()">{{ adding() ? 'Adding...' : 'Add teammate' }}</button>
-</form>
+</div>
 
 @if (loading()) {
-  <p class="hint">Loading...</p>
+  <p class="text-muted">Loading...</p>
 } @else {
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Joined</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (member of members(); track member.id) {
-          @if (editingId() === member.id) {
+  <div class="card card-round mt-3">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
             <tr>
-              <td>{{ member.displayName }}</td>
-              <td>{{ member.email }}</td>
-              <td>
-                <select [(ngModel)]="editRole" name="editRole-{{ member.id }}">
-                  <option value="Member">Member</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </td>
-              <td>{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
-              <td class="hint">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
-              <td>
-                <button type="button" (click)="saveRole(member)">Save</button>
-                <button type="button" class="secondary" (click)="cancelEditRole()">Cancel</button>
-              </td>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Joined</th>
+              <th></th>
             </tr>
-          } @else {
-            <tr>
-              <td>{{ member.displayName }} @if (isSelf(member)) { <span class="hint">(You)</span> }</td>
-              <td>{{ member.email }}</td>
-              <td><span class="badge">{{ member.role }}</span></td>
-              <td>{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
-              <td class="hint">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
-              <td>
-                @if (member.role !== 'Owner' && !isSelf(member)) {
-                  <button type="button" class="secondary" (click)="startEditRole(member)">Edit role</button>
-                  <button type="button" class="secondary" (click)="toggleActive(member)">
-                    {{ member.isActive ? 'Deactivate' : 'Reactivate' }}
-                  </button>
-                }
-              </td>
-            </tr>
-          }
-        } @empty {
-          <tr>
-            <td colspan="6" class="hint">No team members yet.</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+          </thead>
+          <tbody>
+            @for (member of members(); track member.id) {
+              @if (editingId() === member.id) {
+                <tr>
+                  <td>{{ member.displayName }}</td>
+                  <td>{{ member.email }}</td>
+                  <td>
+                    <select class="form-select form-select-sm" [(ngModel)]="editRole" name="editRole-{{ member.id }}">
+                      <option value="Member">Member</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </td>
+                  <td>{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
+                  <td class="text-muted">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
+                  <td>
+                    <button type="button" class="btn btn-primary btn-sm" (click)="saveRole(member)">Save</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEditRole()">Cancel</button>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td>{{ member.displayName }} @if (isSelf(member)) { <span class="text-muted">(You)</span> }</td>
+                  <td>{{ member.email }}</td>
+                  <td><span class="badge badge-primary">{{ member.role }}</span></td>
+                  <td>
+                    @if (member.isActive) {
+                      <span class="badge badge-success">Active</span>
+                    } @else {
+                      <span class="badge badge-secondary">Deactivated</span>
+                    }
+                  </td>
+                  <td class="text-muted">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
+                  <td>
+                    @if (member.role !== 'Owner' && !isSelf(member)) {
+                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEditRole(member)">Edit role</button>
+                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="toggleActive(member)">
+                        {{ member.isActive ? 'Deactivate' : 'Reactivate' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="6" class="text-muted">No team members yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 }

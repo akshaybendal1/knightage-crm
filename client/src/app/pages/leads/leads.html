@@ -1,136 +1,162 @@
-<h1>Leads</h1>
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+  <div>
+    <h3 class="fw-bold mb-0">Leads</h3>
+  </div>
+</div>
 
-<div class="toolbar">
-  <div class="field" style="max-width: 260px; margin-bottom: 0;">
-    <label for="filterStage">Filter by stage</label>
-    <select id="filterStage" name="filterStage" [(ngModel)]="filterStageId" (ngModelChange)="onFilterChange()">
-      <option value="">All stages</option>
-      @for (s of stages(); track s.id) {
-        <option [value]="s.id">{{ s.name }}</option>
-      }
-    </select>
+<div class="row mb-3">
+  <div class="col-md-4">
+    <div class="form-group">
+      <label class="form-label" for="filterStage">Filter by stage</label>
+      <select id="filterStage" name="filterStage" class="form-select" [(ngModel)]="filterStageId" (ngModelChange)="onFilterChange()">
+        <option value="">All stages</option>
+        @for (s of stages(); track s.id) {
+          <option [value]="s.id">{{ s.name }}</option>
+        }
+      </select>
+    </div>
   </div>
 </div>
 
 @if (errorMessage()) {
-  <p class="error">{{ errorMessage() }}</p>
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
 }
 
-<div class="forms-row">
-  <form class="card" (ngSubmit)="createLead()">
-    <h2>New lead</h2>
-    <div class="field">
-      <label for="name">Name</label>
-      <input id="name" name="name" type="text" [(ngModel)]="name" required />
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">New lead</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="createLead()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="name">Name</label>
+            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="name" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="email">Email</label>
+            <input id="email" name="email" type="email" class="form-control" [(ngModel)]="email" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="phone">Phone</label>
+            <input id="phone" name="phone" type="text" class="form-control" [(ngModel)]="phone" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="company">Company</label>
+            <input id="company" name="company" type="text" class="form-control" [(ngModel)]="company" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="pipelineStageId">Pipeline stage</label>
+            <select id="pipelineStageId" name="pipelineStageId" class="form-select" [(ngModel)]="pipelineStageId" required>
+              <option value="" disabled selected>Choose a stage</option>
+              @for (s of stages(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <input id="notes" name="notes" type="text" class="form-control" [(ngModel)]="notes" />
+          </div>
+          <button type="submit" class="btn btn-primary">Add lead</button>
+        </form>
+      </div>
     </div>
-    <div class="field">
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" [(ngModel)]="email" />
-    </div>
-    <div class="field">
-      <label for="phone">Phone</label>
-      <input id="phone" name="phone" type="text" [(ngModel)]="phone" />
-    </div>
-    <div class="field">
-      <label for="company">Company</label>
-      <input id="company" name="company" type="text" [(ngModel)]="company" />
-    </div>
-    <div class="field">
-      <label for="pipelineStageId">Pipeline stage</label>
-      <select id="pipelineStageId" name="pipelineStageId" [(ngModel)]="pipelineStageId" required>
-        <option value="" disabled selected>Choose a stage</option>
-        @for (s of stages(); track s.id) {
-          <option [value]="s.id">{{ s.name }}</option>
-        }
-      </select>
-    </div>
-    <div class="field">
-      <label for="notes">Notes</label>
-      <input id="notes" name="notes" type="text" [(ngModel)]="notes" />
-    </div>
-    <button type="submit">Add lead</button>
-  </form>
+  </div>
 
-  <form class="card" (ngSubmit)="importLeads()">
-    <h2>Bulk import (CSV)</h2>
-    <p class="hint">Format: Name,Email,Phone,Company</p>
-    <div class="field">
-      <label for="importFile">CSV file</label>
-      <input id="importFile" name="importFile" type="file" accept=".csv" (change)="onImportFileSelected($event)" />
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">Bulk import (CSV)</div>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">Format: Name,Email,Phone,Company</p>
+        <form (ngSubmit)="importLeads()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="importFile">CSV file</label>
+            <input id="importFile" name="importFile" type="file" accept=".csv" class="form-control" (change)="onImportFileSelected($event)" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="importStageId">Pipeline stage</label>
+            <select id="importStageId" name="importStageId" class="form-select" [(ngModel)]="importStageId" required>
+              <option value="" disabled selected>Choose a stage</option>
+              @for (s of stages(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          @if (importMessage()) {
+            <p class="text-muted small">{{ importMessage() }}</p>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="importing()">{{ importing() ? 'Importing...' : 'Import' }}</button>
+        </form>
+      </div>
     </div>
-    <div class="field">
-      <label for="importStageId">Pipeline stage</label>
-      <select id="importStageId" name="importStageId" [(ngModel)]="importStageId" required>
-        <option value="" disabled selected>Choose a stage</option>
-        @for (s of stages(); track s.id) {
-          <option [value]="s.id">{{ s.name }}</option>
-        }
-      </select>
-    </div>
-    @if (importMessage()) {
-      <p class="hint">{{ importMessage() }}</p>
-    }
-    <button type="submit" [disabled]="importing()">{{ importing() ? 'Importing...' : 'Import' }}</button>
-  </form>
+  </div>
 </div>
 
 @if (loading()) {
-  <p class="hint">Loading...</p>
+  <p class="text-muted">Loading...</p>
 } @else {
-  <div class="table-scroll">
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Company</th>
-        <th>Stage</th>
-        <th>Source</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (lead of leads(); track lead.id) {
-        @if (editingId() === lead.id) {
-          <tr>
-            <td><input type="text" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
-            <td><input type="email" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
-            <td><input type="text" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
-            <td><input type="text" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
-            <td>
-              <select [(ngModel)]="editStageId" name="editStage-{{ lead.id }}">
-                @for (s of stages(); track s.id) {
-                  <option [value]="s.id">{{ s.name }}</option>
-                }
-              </select>
-            </td>
-            <td class="hint">{{ lead.source }}</td>
-            <td>
-              <button type="button" (click)="saveEdit(lead.id)">Save</button>
-              <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
-            </td>
-          </tr>
-        } @else {
-          <tr>
-            <td>{{ lead.name }}</td>
-            <td>{{ lead.email }}</td>
-            <td>{{ lead.phone }}</td>
-            <td>{{ lead.company }}</td>
-            <td><span class="badge">{{ stageName(lead.pipelineStageId) }}</span></td>
-            <td>{{ lead.source }}</td>
-            <td>
-              <a [routerLink]="['/leads', lead.id]">View</a>
-              <button type="button" class="secondary" (click)="startEdit(lead)">Edit</button>
-            </td>
-          </tr>
-        }
-      } @empty {
-        <tr>
-          <td colspan="7" class="hint">No leads yet.</td>
-        </tr>
-      }
-    </tbody>
-  </table>
+  <div class="card card-round mt-1">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Company</th>
+              <th>Stage</th>
+              <th>Source</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (lead of leads(); track lead.id) {
+              @if (editingId() === lead.id) {
+                <tr>
+                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
+                  <td><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
+                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
+                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
+                  <td>
+                    <select class="form-select form-select-sm" [(ngModel)]="editStageId" name="editStage-{{ lead.id }}">
+                      @for (s of stages(); track s.id) {
+                        <option [value]="s.id">{{ s.name }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td class="text-muted">{{ lead.source }}</td>
+                  <td>
+                    <button type="button" class="btn btn-primary btn-sm" (click)="saveEdit(lead.id)">Save</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td>{{ lead.name }}</td>
+                  <td>{{ lead.email }}</td>
+                  <td>{{ lead.phone }}</td>
+                  <td>{{ lead.company }}</td>
+                  <td><span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span></td>
+                  <td>{{ lead.source }}</td>
+                  <td>
+                    <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="7" class="text-muted">No leads yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 }

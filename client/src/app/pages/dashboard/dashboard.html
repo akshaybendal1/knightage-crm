@@ -1,63 +1,93 @@
-<h1>Dashboard</h1>
-
-@if (errorMessage()) {
-  <p class="error">{{ errorMessage() }}</p>
-}
-
-<div class="card">
-  <h2>Pipeline overview</h2>
-  <ul class="pipeline-bars">
-    @for (stage of pipelineSummary(); track stage.stageId) {
-      <li>
-        <a class="pipeline-row" [routerLink]="['/leads']" [queryParams]="{ pipelineStageId: stage.stageId }">
-          <span class="pipeline-name">{{ stage.stageName }}</span>
-          <span class="pipeline-bar-track">
-            <span class="pipeline-bar-fill" [style.width.%]="barWidth(stage.leadCount)"></span>
-          </span>
-          <span class="pipeline-count">{{ stage.leadCount }}</span>
-        </a>
-      </li>
-    } @empty {
-      <li class="hint">No pipeline stages yet.</li>
-    }
-  </ul>
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+  <div>
+    <h3 class="fw-bold mb-0">Dashboard</h3>
+  </div>
 </div>
 
-<div class="stat-row">
-  <div class="card stat-card">
-    <h2>Won / Lost</h2>
-    <div class="range-toggle">
-      <button type="button" [class.active]="range() === 'week'" (click)="setRange('week')">This week</button>
-      <button type="button" [class.active]="range() === 'month'" (click)="setRange('month')">This month</button>
-      <button type="button" [class.active]="range() === 'all'" (click)="setRange('all')">All time</button>
+@if (errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">Pipeline overview</div>
+      </div>
+      <div class="card-body">
+        <ul class="pipeline-bars">
+          @for (stage of pipelineSummary(); track stage.stageId) {
+            <li>
+              <a class="pipeline-row" [routerLink]="['/leads']" [queryParams]="{ pipelineStageId: stage.stageId }">
+                <span class="pipeline-name">{{ stage.stageName }}</span>
+                <span class="pipeline-bar-track">
+                  <span class="pipeline-bar-fill" [style.width.%]="barWidth(stage.leadCount)"></span>
+                </span>
+                <span class="pipeline-count">{{ stage.leadCount }}</span>
+              </a>
+            </li>
+          } @empty {
+            <li class="text-muted">No pipeline stages yet.</li>
+          }
+        </ul>
+      </div>
     </div>
-    @if (wonLost(); as wl) {
-      <div class="stat-pair">
-        <div class="stat-tile won">
-          <span class="stat-value">{{ wl.won }}</span>
-          <span class="stat-label">Won</span>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card card-round h-100">
+      <div class="card-header">
+        <div class="card-title">Won / Lost</div>
+      </div>
+      <div class="card-body">
+        <div class="range-toggle">
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'week'" [class.btn-label-light]="range() !== 'week'" (click)="setRange('week')">This week</button>
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'month'" [class.btn-label-light]="range() !== 'month'" (click)="setRange('month')">This month</button>
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'all'" [class.btn-label-light]="range() !== 'all'" (click)="setRange('all')">All time</button>
         </div>
-        <div class="stat-tile lost">
-          <span class="stat-value">{{ wl.lost }}</span>
-          <span class="stat-label">Lost</span>
+        @if (wonLost(); as wl) {
+          <div class="stat-pair">
+            <div class="stat-tile won">
+              <span class="stat-value">{{ wl.won }}</span>
+              <span class="stat-label">Won</span>
+            </div>
+            <div class="stat-tile lost">
+              <span class="stat-value">{{ wl.lost }}</span>
+              <span class="stat-label">Lost</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-round h-100">
+      <div class="card-header">
+        <div class="card-title">Activity this week</div>
+      </div>
+      <div class="card-body">
+        <div class="stat-tile">
+          <span class="stat-value">{{ activityCount() ?? '—' }}</span>
+          <span class="stat-label">notes, stage changes &amp; task completions logged</span>
         </div>
       </div>
-    }
-  </div>
-
-  <div class="card stat-card">
-    <h2>Activity this week</h2>
-    <div class="stat-tile">
-      <span class="stat-value">{{ activityCount() ?? '—' }}</span>
-      <span class="stat-label">notes, stage changes &amp; task completions logged</span>
     </div>
   </div>
 
-  <a class="card stat-card clickable" [routerLink]="['/tasks']" [queryParams]="{ scope: 'all' }">
-    <h2>Overdue tasks</h2>
-    <div class="stat-tile overdue">
-      <span class="stat-value">{{ overdueTaskCount() ?? '—' }}</span>
-      <span class="stat-label">across the whole team</span>
-    </div>
-  </a>
+  <div class="col-md-4">
+    <a class="card card-round h-100 d-block text-decoration-none text-reset" [routerLink]="['/tasks']" [queryParams]="{ scope: 'all' }">
+      <div class="card-header">
+        <div class="card-title">Overdue tasks</div>
+      </div>
+      <div class="card-body">
+        <div class="stat-tile overdue">
+          <span class="stat-value">{{ overdueTaskCount() ?? '—' }}</span>
+          <span class="stat-label">across the whole team</span>
+        </div>
+      </div>
+    </a>
+  </div>
 </div>

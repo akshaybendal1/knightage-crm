@@ -1,11 +1,15 @@
-<h1>{{ showingAll ? 'All Open Tasks' : 'My Tasks' }}</h1>
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+  <div>
+    <h3 class="fw-bold mb-0">{{ showingAll ? 'All Open Tasks' : 'My Tasks' }}</h3>
+  </div>
+</div>
 
 @if (errorMessage()) {
-  <p class="error">{{ errorMessage() }}</p>
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
 }
 
 @if (loading()) {
-  <p class="hint">Loading...</p>
+  <p class="text-muted">Loading...</p>
 } @else {
   <ul class="task-list">
     @for (task of tasks(); track task.id) {
@@ -14,10 +18,10 @@
         <div>
           <div class="task-title">
             {{ task.title }}
-            <a [routerLink]="['/leads', task.leadId]" class="hint">({{ task.leadName }})</a>
+            <a [routerLink]="['/leads', task.leadId]" class="text-muted small">({{ task.leadName }})</a>
           </div>
           @if (task.description) {
-            <div class="hint">{{ task.description }}</div>
+            <div class="text-muted small">{{ task.description }}</div>
           }
           <div class="task-due" [class.overdue]="isOverdue(task)">
             Due {{ task.dueDate | date: 'mediumDate' }}
@@ -25,7 +29,7 @@
         </div>
       </li>
     } @empty {
-      <li class="hint">No open tasks. You're all caught up.</li>
+      <li class="text-muted">No open tasks. You're all caught up.</li>
     }
   </ul>
 }
