@@ -5,8 +5,27 @@
   letter-spacing: 0.02em;
 }
 
+/* Bootstrap's own navbar CSS sets .navbar-nav .dropdown-menu to
+   position:static by default, relying on its JS (Popper) to switch it to
+   absolute + place it once opened. That JS isn't loaded here (deliberately
+   -- see app.ts), so without this override the menu renders in normal
+   document flow instead of floating: it pushes the fixed-height header's
+   content taller than its box, spilling the dropdown down over the page. */
+.topbar-user .dropdown-menu {
+  position: absolute !important;
+  top: 100%;
+  right: 0;
+  left: auto;
+}
+
 .dropdown-user.show {
   display: block;
+}
+
+.profile-pic {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .main-header-topbar {
