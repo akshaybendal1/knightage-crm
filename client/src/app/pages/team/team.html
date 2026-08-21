@@ -48,7 +48,7 @@
   <div class="card card-round mt-3">
     <div class="card-body">
       <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover table-card-mobile">
           <thead>
             <tr>
               <th>Name</th>
@@ -63,16 +63,16 @@
             @for (member of members(); track member.id) {
               @if (editingId() === member.id) {
                 <tr>
-                  <td>{{ member.displayName }}</td>
-                  <td>{{ member.email }}</td>
-                  <td>
+                  <td data-label="Name">{{ member.displayName }}</td>
+                  <td data-label="Email">{{ member.email }}</td>
+                  <td data-label="Role">
                     <select class="form-select form-select-sm" [(ngModel)]="editRole" name="editRole-{{ member.id }}">
                       <option value="Member">Member</option>
                       <option value="Admin">Admin</option>
                     </select>
                   </td>
-                  <td>{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
-                  <td class="text-muted">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
+                  <td data-label="Status">{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
+                  <td data-label="Joined" class="text-muted">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
                   <td>
                     <button type="button" class="btn btn-primary btn-sm" (click)="saveRole(member)">Save</button>
                     <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEditRole()">Cancel</button>
@@ -80,17 +80,17 @@
                 </tr>
               } @else {
                 <tr>
-                  <td>{{ member.displayName }} @if (isSelf(member)) { <span class="text-muted">(You)</span> }</td>
-                  <td>{{ member.email }}</td>
-                  <td><span class="badge badge-primary">{{ member.role }}</span></td>
-                  <td>
+                  <td data-label="Name">{{ member.displayName }} @if (isSelf(member)) { <span class="text-muted">(You)</span> }</td>
+                  <td data-label="Email">{{ member.email }}</td>
+                  <td data-label="Role"><span class="badge badge-primary">{{ member.role }}</span></td>
+                  <td data-label="Status">
                     @if (member.isActive) {
                       <span class="badge badge-success">Active</span>
                     } @else {
                       <span class="badge badge-secondary">Deactivated</span>
                     }
                   </td>
-                  <td class="text-muted">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
+                  <td data-label="Joined" class="text-muted">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
                   <td>
                     @if (member.role !== 'Owner' && !isSelf(member)) {
                       <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEditRole(member)">Edit role</button>

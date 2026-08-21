@@ -102,7 +102,7 @@
   <div class="card card-round mt-1">
     <div class="card-body">
       <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover table-card-mobile">
           <thead>
             <tr>
               <th>Name</th>
@@ -118,18 +118,18 @@
             @for (lead of leads(); track lead.id) {
               @if (editingId() === lead.id) {
                 <tr>
-                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
-                  <td><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
-                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
-                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
-                  <td>
+                  <td data-label="Name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
+                  <td data-label="Email"><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
+                  <td data-label="Phone"><input type="text" class="form-control form-control-sm" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
+                  <td data-label="Company"><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
+                  <td data-label="Stage">
                     <select class="form-select form-select-sm" [(ngModel)]="editStageId" name="editStage-{{ lead.id }}">
                       @for (s of stages(); track s.id) {
                         <option [value]="s.id">{{ s.name }}</option>
                       }
                     </select>
                   </td>
-                  <td class="text-muted">{{ lead.source }}</td>
+                  <td data-label="Source" class="text-muted">{{ lead.source }}</td>
                   <td>
                     <button type="button" class="btn btn-primary btn-sm" (click)="saveEdit(lead.id)">Save</button>
                     <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
@@ -137,12 +137,12 @@
                 </tr>
               } @else {
                 <tr>
-                  <td>{{ lead.name }}</td>
-                  <td>{{ lead.email }}</td>
-                  <td>{{ lead.phone }}</td>
-                  <td>{{ lead.company }}</td>
-                  <td><span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span></td>
-                  <td>{{ lead.source }}</td>
+                  <td data-label="Name">{{ lead.name }}</td>
+                  <td data-label="Email">{{ lead.email }}</td>
+                  <td data-label="Phone">{{ lead.phone }}</td>
+                  <td data-label="Company">{{ lead.company }}</td>
+                  <td data-label="Stage"><span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span></td>
+                  <td data-label="Source">{{ lead.source }}</td>
                   <td>
                     <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
                     <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>

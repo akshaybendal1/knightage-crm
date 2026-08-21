@@ -46,7 +46,7 @@
   <div class="card card-round mt-3">
     <div class="card-body">
       <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-hover table-card-mobile">
           <thead>
             <tr>
               <th>Name</th>
@@ -60,10 +60,10 @@
             @for (stage of stages(); track stage.id) {
               @if (editingId() === stage.id) {
                 <tr>
-                  <td><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ stage.id }}" /></td>
-                  <td><input type="number" class="form-control form-control-sm" [(ngModel)]="editSortOrder" name="editSortOrder-{{ stage.id }}" /></td>
-                  <td><input type="checkbox" class="form-check-input" [(ngModel)]="editIsWon" name="editIsWon-{{ stage.id }}" /></td>
-                  <td><input type="checkbox" class="form-check-input" [(ngModel)]="editIsLost" name="editIsLost-{{ stage.id }}" /></td>
+                  <td data-label="Name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ stage.id }}" /></td>
+                  <td data-label="Sort order"><input type="number" class="form-control form-control-sm" [(ngModel)]="editSortOrder" name="editSortOrder-{{ stage.id }}" /></td>
+                  <td data-label="Won"><input type="checkbox" class="form-check-input" [(ngModel)]="editIsWon" name="editIsWon-{{ stage.id }}" /></td>
+                  <td data-label="Lost"><input type="checkbox" class="form-check-input" [(ngModel)]="editIsLost" name="editIsLost-{{ stage.id }}" /></td>
                   <td>
                     <button type="button" class="btn btn-primary btn-sm" (click)="saveEdit(stage.id)">Save</button>
                     <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
@@ -71,10 +71,10 @@
                 </tr>
               } @else {
                 <tr>
-                  <td>{{ stage.name }}</td>
-                  <td>{{ stage.sortOrder }}</td>
-                  <td>{{ stage.isWon ? 'Yes' : '—' }}</td>
-                  <td>{{ stage.isLost ? 'Yes' : '—' }}</td>
+                  <td data-label="Name">{{ stage.name }}</td>
+                  <td data-label="Sort order">{{ stage.sortOrder }}</td>
+                  <td data-label="Won">{{ stage.isWon ? 'Yes' : '—' }}</td>
+                  <td data-label="Lost">{{ stage.isLost ? 'Yes' : '—' }}</td>
                   <td><button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(stage)">Edit</button></td>
                 </tr>
               }

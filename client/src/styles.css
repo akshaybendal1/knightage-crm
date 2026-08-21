@@ -2,6 +2,79 @@
    element/card/table/button/badge/form styling now -- this file only holds
    what's genuinely specific to this app. */
 
+/* Bootstrap's .row only adds a horizontal gutter by default (--bs-gutter-y is
+   0) -- side-by-side columns (e.g. the three dashboard stat cards) look fine
+   on desktop, but once they stack to one-per-line on mobile they butt
+   directly against each other with no gap. This sets the vertical gutter
+   variable Bootstrap already reads, so stacked columns everywhere get a
+   consistent gap; it doesn't affect the horizontal gutter or desktop layout,
+   since on desktop those columns never wrap onto separate rows. */
+.row {
+  --bs-gutter-y: 1rem;
+}
+
+/* Bootstrap tables have no built-in small-screen layout -- .table-responsive
+   only adds horizontal scrolling, which on a phone means every column past
+   the first one or two is cut off and has to be scrolled to sideways. Tables
+   opted into this class (leads, pipeline stages, team) instead render each
+   row as a stacked card below 768px, with each cell's data-label attribute
+   shown as a small heading above its value. Cells with no data-label (the
+   actions column) just render their buttons in a plain block. */
+@media (max-width: 767.98px) {
+  .table-card-mobile thead {
+    display: none;
+  }
+
+  .table-card-mobile,
+  .table-card-mobile tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .table-card-mobile tr {
+    display: block;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .table-card-mobile td {
+    display: block;
+    border: none;
+    padding: 0.3rem 0;
+  }
+
+  .table-card-mobile td[data-label] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    text-align: left;
+  }
+
+  .table-card-mobile td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+  }
+
+  .table-card-mobile td[data-label] .form-control,
+  .table-card-mobile td[data-label] .form-select {
+    width: 100%;
+  }
+
+  /* kaiadmin's base .badge rule sets margin-left:auto (it expects badges to
+     sit in a flex row and float right); inside our flex-column card layout
+     that pushes badges to the right instead of lining up under their label. */
+  .table-card-mobile td[data-label] .badge {
+    margin-left: 0;
+  }
+}
+
 /* The off-canvas sidebar sits at left:-270px below 1200.5px (see app.css) so
    it can slide in; kaiadmin's own CSS only clips that with overflow-x:hidden
    while the sidebar is open (body.nav_open), not by default. That gap is a
