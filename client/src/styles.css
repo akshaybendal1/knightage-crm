@@ -2,6 +2,19 @@
    element/card/table/button/badge/form styling now -- this file only holds
    what's genuinely specific to this app. */
 
+/* The off-canvas sidebar sits at left:-270px below 1200.5px (see app.css) so
+   it can slide in; kaiadmin's own CSS only clips that with overflow-x:hidden
+   while the sidebar is open (body.nav_open), not by default. That gap is a
+   known source of a stray horizontal scrollbar on mobile browsers even
+   though the sidebar is position:fixed. Belt-and-suspenders fix: never allow
+   horizontal document scroll -- nothing in this app relies on it, table
+   overflow is handled separately by Bootstrap's .table-responsive. */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 /* The actions cell (View/Edit, Save/Cancel) is the last column and has no
    explicit width, so once two buttons plus their margin exceed it, they can
    wrap onto separate lines instead of staying aligned on one row. Tables are
