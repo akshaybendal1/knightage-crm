@@ -1,24 +1,120 @@
 @if (auth.isAuthenticated()) {
-  <nav class="topnav">
-    <span class="brand">Knightage CRM</span>
-    <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-    <a routerLink="/leads" routerLinkActive="active">Leads</a>
-    <a routerLink="/pipeline-stages" routerLinkActive="active">Pipeline Stages</a>
-    <a routerLink="/tasks" routerLinkActive="active">
-      Tasks
-      @if (dueTaskCount() > 0) {
-        <span class="badge-count">{{ dueTaskCount() }}</span>
-      }
-    </a>
-    @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
-      <a routerLink="/team" routerLinkActive="active">Team</a>
-    }
-    <span class="spacer"></span>
-    <span class="user">{{ auth.currentUser()?.displayName }}</span>
-    <button type="button" (click)="auth.logout()">Logout</button>
-  </nav>
-}
+  <div class="wrapper">
+    <div class="sidebar" data-background-color="dark">
+      <div class="sidebar-logo">
+        <div class="logo-header" data-background-color="dark">
+          <a routerLink="/dashboard" class="logo">
+            <span class="brand-text">Knightage CRM</span>
+          </a>
+        </div>
+      </div>
+      <div class="sidebar-wrapper scrollbar scrollbar-inner">
+        <div class="sidebar-content">
+          <ul class="nav nav-secondary">
+            <li class="nav-item" routerLinkActive="active">
+              <a routerLink="/dashboard" (click)="closeSidebar()">
+                <i class="fas fa-home"></i>
+                <p>Dashboard</p>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active">
+              <a routerLink="/leads" (click)="closeSidebar()">
+                <i class="fas fa-user-tie"></i>
+                <p>Leads</p>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active">
+              <a routerLink="/pipeline-stages" (click)="closeSidebar()">
+                <i class="fas fa-stream"></i>
+                <p>Pipeline Stages</p>
+              </a>
+            </li>
+            <li class="nav-item" routerLinkActive="active">
+              <a routerLink="/tasks" (click)="closeSidebar()">
+                <i class="fas fa-check-square"></i>
+                <p>Tasks</p>
+                @if (dueTaskCount() > 0) {
+                  <span class="badge badge-danger">{{ dueTaskCount() }}</span>
+                }
+              </a>
+            </li>
+            @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
+              <li class="nav-item" routerLinkActive="active">
+                <a routerLink="/team" (click)="closeSidebar()">
+                  <i class="fas fa-users-cog"></i>
+                  <p>Team</p>
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
 
-<main class="page">
+    <div class="main-panel">
+      <div class="main-header">
+        <div class="main-header-logo">
+          <div class="logo-header" data-background-color="dark">
+            <a routerLink="/dashboard" class="logo">
+              <span class="brand-text">Knightage CRM</span>
+            </a>
+            <button class="btn btn-toggle sidebar-toggle-btn" type="button" (click)="toggleSidebar()" aria-label="Toggle menu">
+              <i class="fas fa-bars"></i>
+            </button>
+          </div>
+        </div>
+        <div class="main-header-topbar d-flex align-items-center justify-content-end border-bottom">
+          <ul class="navbar-nav topbar-nav d-flex flex-row align-items-center mb-0">
+            <li class="nav-item topbar-icon hidden-caret">
+              <a class="nav-link" routerLink="/tasks" title="Due tasks">
+                <i class="fa fa-bell"></i>
+                @if (dueTaskCount() > 0) {
+                  <span class="notification">{{ dueTaskCount() }}</span>
+                }
+              </a>
+            </li>
+            <li class="nav-item topbar-user dropdown hidden-caret">
+              <a class="dropdown-toggle profile-pic" href="javascript:void(0)" (click)="toggleUserMenu($event)">
+                <span class="user-avatar user-avatar-sm">{{ initials() }}</span>
+                <span class="profile-username">
+                  <span class="op-7">Hi,</span>
+                  <span class="fw-bold">{{ auth.currentUser()?.displayName }}</span>
+                </span>
+              </a>
+              <ul class="dropdown-menu dropdown-user animated fadeIn" [class.show]="userMenuOpen()">
+                <li>
+                  <div class="user-box">
+                    <span class="user-avatar user-avatar-lg">{{ initials() }}</span>
+                    <div class="u-text">
+                      <h4>{{ auth.currentUser()?.displayName }}</h4>
+                      <p class="text-muted">{{ auth.currentUser()?.email }}</p>
+                      <span class="badge badge-secondary">{{ auth.currentUser()?.role }}</span>
+                    </div>
+                  </div>
+                </li>
+                <li>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item" href="javascript:void(0)" (click)="auth.logout()">Logout</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="page-inner">
+          <router-outlet />
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div class="container-fluid d-flex justify-content-center">
+          <div class="copyright">Knightage CRM</div>
+        </div>
+      </footer>
+    </div>
+  </div>
+} @else {
   <router-outlet />
-</main>
+}

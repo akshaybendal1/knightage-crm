@@ -1,4 +1,4 @@
-import { Component, effect, signal } from '@angular/core';
+import { Component, HostListener, effect, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Auth } from './core/auth';
 import { CrmApi } from './core/crm-api';
@@ -12,6 +12,8 @@ import { isDueToday, isOverdue } from './core/task-status';
 })
 export class App {
   dueTaskCount = signal(0);
+  sidebarOpen = signal(false);
+  userMenuOpen = signal(false);
 
   constructor(
     protected readonly auth: Auth,
@@ -24,6 +26,45 @@ export class App {
         this.loadDueTaskCount();
       }
     });
+
+    // KaiAdmin's CSS keys the mobile slide-out sidebar off body.nav_open --
+    // there's no JS bundled for it here (see app.css comment), so this drives
+    // the same class by hand instead of shipping jQuery/Bootstrap JS for one toggle.
+    effect(() => {
+      document.body.classList.toggle('nav_open', this.sidebarOpen());
+    });
+  }
+
+  initials(): string {
+    const name = this.auth.currentUser()?.displayName ?? '';
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]!.toUpperCase())
+      .join('');
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update((open) => !open);
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
+  }
+
+  toggleUserMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.userMenuOpen.update((open) => !open);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (this.userMenuOpen() && !target.closest('.topbar-user')) {
+      this.userMenuOpen.set(false);
+    }
   }
 
   private loadDueTaskCount(): void {
