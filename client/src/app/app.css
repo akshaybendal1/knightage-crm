@@ -15,14 +15,27 @@
 }
 
 .topbar-nav {
-  gap: 1rem;
+  gap: 1.5rem;
+}
+
+.topbar-icon .nav-link {
+  padding: 0.4rem 0.5rem;
 }
 
 /* kaiadmin.css assumes a single 70px header row (.main-panel > .container has a
-   hardcoded margin-top: 69px); we stack a second 70px row for the icon/profile
-   bar, so the page content needs to clear both rows instead of just one. */
+   hardcoded margin-top: 69px). Below 992px we stack a second 70px row (the
+   duplicate logo bar), so content needs to clear both. At 992px+ kaiadmin
+   itself hides that duplicate row (.main-header-logo { display: none }), so
+   there's only ever the one 70px row there -- the 140px override was applying
+   unconditionally, leaving a 70px dead gap above the page heading on desktop. */
 .main-panel > .container {
   margin-top: 140px !important;
+}
+
+@media (min-width: 992px) {
+  .main-panel > .container {
+    margin-top: 69px !important;
+  }
 }
 
 /* kaiadmin's own .avatar-sm/.avatar-title combo wasn't rendering (some rule
