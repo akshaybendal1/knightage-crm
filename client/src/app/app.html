@@ -10,6 +10,9 @@
         <span class="badge-count">{{ dueTaskCount() }}</span>
       }
     </a>
+    @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
+      <a routerLink="/team" routerLinkActive="active">Team</a>
+    }
     <span class="spacer"></span>
     <span class="user">{{ auth.currentUser()?.displayName }}</span>
     <button type="button" (click)="auth.logout()">Logout</button>

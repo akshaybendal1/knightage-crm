@@ -54,6 +54,17 @@ export interface OrgUser {
   email: string;
 }
 
+export type TeamRole = 'Owner' | 'Admin' | 'Member';
+
+export interface TeamMember {
+  id: string;
+  displayName: string;
+  email: string;
+  role: TeamRole;
+  isActive: boolean;
+  createdAtUtc: string;
+}
+
 export interface PipelineSummaryItem {
   stageId: string;
   stageName: string;

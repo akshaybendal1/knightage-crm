@@ -1,0 +1,90 @@
+<h1>Team</h1>
+
+<form class="card" (ngSubmit)="addMember()">
+  <h2>Add teammate</h2>
+  <div class="field">
+    <label for="displayName">Name</label>
+    <input id="displayName" name="displayName" type="text" [(ngModel)]="displayName" required />
+  </div>
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" [(ngModel)]="email" required />
+  </div>
+  <div class="field">
+    <label for="password">Initial password</label>
+    <input id="password" name="password" type="password" [(ngModel)]="password" required minlength="8" />
+    <span class="hint">At least 8 characters. Share it with them directly -- there's no invite email yet.</span>
+  </div>
+  <div class="field">
+    <label for="role">Role</label>
+    <select id="role" name="role" [(ngModel)]="role" required>
+      <option value="Member">Member</option>
+      <option value="Admin">Admin</option>
+    </select>
+  </div>
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+  <button type="submit" [disabled]="adding()">{{ adding() ? 'Adding...' : 'Add teammate' }}</button>
+</form>
+
+@if (loading()) {
+  <p class="hint">Loading...</p>
+} @else {
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (member of members(); track member.id) {
+          @if (editingId() === member.id) {
+            <tr>
+              <td>{{ member.displayName }}</td>
+              <td>{{ member.email }}</td>
+              <td>
+                <select [(ngModel)]="editRole" name="editRole-{{ member.id }}">
+                  <option value="Member">Member</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </td>
+              <td>{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
+              <td class="hint">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
+              <td>
+                <button type="button" (click)="saveRole(member)">Save</button>
+                <button type="button" class="secondary" (click)="cancelEditRole()">Cancel</button>
+              </td>
+            </tr>
+          } @else {
+            <tr>
+              <td>{{ member.displayName }} @if (isSelf(member)) { <span class="hint">(You)</span> }</td>
+              <td>{{ member.email }}</td>
+              <td><span class="badge">{{ member.role }}</span></td>
+              <td>{{ member.isActive ? 'Active' : 'Deactivated' }}</td>
+              <td class="hint">{{ member.createdAtUtc | date: 'mediumDate' }}</td>
+              <td>
+                @if (member.role !== 'Owner' && !isSelf(member)) {
+                  <button type="button" class="secondary" (click)="startEditRole(member)">Edit role</button>
+                  <button type="button" class="secondary" (click)="toggleActive(member)">
+                    {{ member.isActive ? 'Deactivate' : 'Reactivate' }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        } @empty {
+          <tr>
+            <td colspan="6" class="hint">No team members yet.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
