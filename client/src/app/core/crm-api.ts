@@ -26,7 +26,7 @@ export class CrmApi {
   }
 
   updatePipelineStage(id: string, payload: { name: string; sortOrder: number; isWon: boolean; isLost: boolean }) {
-    return this.http.put<PipelineStage>(`/api/pipeline-stages/${id}`, payload);
+    return this.http.post<PipelineStage>(`/api/pipeline-stages/${id}`, payload);
   }
 
   // Leads
@@ -64,7 +64,7 @@ export class CrmApi {
       notes?: string;
     },
   ) {
-    return this.http.put<Lead>(`/api/leads/${id}`, payload);
+    return this.http.post<Lead>(`/api/leads/${id}`, payload);
   }
 
   importLeads(file: File, pipelineStageId: string) {
@@ -106,7 +106,7 @@ export class CrmApi {
   }
 
   updateTaskStatus(id: string, status: 'Open' | 'Completed') {
-    return this.http.put<LeadTask>(`/api/tasks/${id}`, { status });
+    return this.http.post<LeadTask>(`/api/tasks/${id}`, { status });
   }
 
   // Dashboard

@@ -71,7 +71,7 @@ public class LeadsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = lead.Id }, lead);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, LeadRequest request)
     {
         var existing = await _leadRepository.GetByIdAsync(id);

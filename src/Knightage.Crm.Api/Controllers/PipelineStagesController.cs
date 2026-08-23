@@ -37,7 +37,7 @@ public class PipelineStagesController : ControllerBase
         return Ok(stage);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, PipelineStageRequest request)
     {
         var existing = await _repository.GetByIdAsync(id);

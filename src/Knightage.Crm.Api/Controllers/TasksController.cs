@@ -41,7 +41,7 @@ public class TasksController : ControllerBase
         return Ok(await _taskRepository.GetByAssigneeAsync(targetUserId, status));
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateTaskStatusRequest request)
     {
         var task = await _taskRepository.GetByIdAsync(id);
