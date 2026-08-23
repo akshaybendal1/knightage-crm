@@ -1,13 +1,18 @@
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Tenancy;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Knightage.Crm.Api.Middleware;
 
 /// <summary>
 /// Resolves the caller's tenant database once per request (from the JWT's org_id claim) and
 /// stores it on the scoped CurrentTenantContext, which DapperContext reads when building its
-/// connection. Placed after UseAuthorization() so anonymous endpoints (client-config, health)
-/// never trigger a platform lookup, and unauthorized requests never reach here at all.
+/// connection. Placed after UseAuthorization() so unauthorized requests never reach here at all.
+/// Only runs for endpoints that actually require authorization -- the Angular app's HTTP
+/// interceptor attaches the bearer token to every request once a user is logged in, including
+/// anonymous ones like /api/client-config, so IsAuthenticated alone isn't a safe gate: a real
+/// incident showed a broken/unprovisioned tenant taking down the anonymous bootstrap endpoint
+/// with it, which should never depend on tenant resolution at all.
 /// </summary>
 public class TenantResolutionMiddleware
 {
@@ -20,7 +25,11 @@ public class TenantResolutionMiddleware
 
     public async Task InvokeAsync(HttpContext context, CurrentTenantContext tenantContext, ITenantDatabaseResolver resolver)
     {
-        if (context.User.Identity?.IsAuthenticated == true)
+        var endpoint = context.GetEndpoint();
+        var requiresAuthorization = endpoint?.Metadata.GetMetadata<IAuthorizeData>() is not null
+            && endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null;
+
+        if (requiresAuthorization && context.User.Identity?.IsAuthenticated == true)
         {
             var orgIdClaim = context.User.FindFirst("org_id")?.Value;
             if (!Guid.TryParse(orgIdClaim, out var organizationId))
