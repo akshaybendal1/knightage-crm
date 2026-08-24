@@ -1,0 +1,48 @@
+<div class="toolbar">
+  <h1>Leads — Board</h1>
+  <a routerLink="/leads" class="hint">List view</a>
+</div>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+
+@if (loading()) {
+  <p class="hint">Loading...</p>
+} @else {
+  <div class="board">
+    @for (column of columns(); track column.stage.id) {
+      <div class="column">
+        <div class="column-header">
+          <span>{{ column.stage.name }}</span>
+          <span class="count">{{ column.leads.length }}</span>
+        </div>
+        <div
+          class="column-body"
+          cdkDropList
+          [id]="column.stage.id"
+          [cdkDropListData]="column.leads"
+          [cdkDropListConnectedTo]="connectedListIds()"
+          (cdkDropListDropped)="drop($event, column.stage.id)"
+        >
+          @for (lead of column.leads; track lead.id) {
+            <a class="lead-card" [class.moving]="movingLeadId() === lead.id" [routerLink]="['/leads', lead.id]" cdkDrag>
+              <div class="lead-card-name">{{ lead.name }}</div>
+              @if (lead.company) {
+                <div class="hint">{{ lead.company }}</div>
+              }
+              @if (lead.email) {
+                <div class="hint">{{ lead.email }}</div>
+              }
+              <div class="lead-card-placeholder" *cdkDragPlaceholder></div>
+            </a>
+          } @empty {
+            <p class="hint empty-hint">No leads here.</p>
+          }
+        </div>
+      </div>
+    } @empty {
+      <p class="hint">No pipeline stages yet — create one first.</p>
+    }
+  </div>
+}

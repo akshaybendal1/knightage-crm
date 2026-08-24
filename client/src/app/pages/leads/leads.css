@@ -1,3 +1,7 @@
 .table-scroll {
   overflow-x: auto;
 }
+
+.toolbar h1 {
+  margin: 0;
+}

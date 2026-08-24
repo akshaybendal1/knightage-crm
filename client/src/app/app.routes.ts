@@ -12,6 +12,10 @@ export const routes: Routes = [
       { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard').then((m) => m.Dashboard) },
       { path: 'leads', loadComponent: () => import('./pages/leads/leads').then((m) => m.Leads) },
       {
+        path: 'leads/board',
+        loadComponent: () => import('./pages/leads/kanban/kanban').then((m) => m.Kanban),
+      },
+      {
         path: 'leads/:id',
         loadComponent: () => import('./pages/leads/lead-detail/lead-detail').then((m) => m.LeadDetail),
       },
