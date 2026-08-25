@@ -51,25 +51,32 @@
     width: 100%;
   }
 
+  /* No background of its own, this card was white sitting inside the
+     table's already-white .card-body, with only a 1px border between them
+     -- barely visible. kaiadmin's own page background (#f5f7fd, set on
+     body) gives each row a tint that actually reads as a distinct card
+     against its white container, so it borrows that instead of inventing
+     a new color. */
   .table-card-mobile tr {
     display: block;
+    background: #f5f7fd;
     border: 1px solid #e9ecef;
     border-radius: 0.5rem;
-    padding: 0.6rem 0.9rem;
-    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .table-card-mobile td {
     display: block;
     border: none;
-    padding: 0.3rem 0;
+    padding: 0.2rem 0;
   }
 
   .table-card-mobile td[data-label] {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.2rem;
+    gap: 0.1rem;
     text-align: left;
   }
 
