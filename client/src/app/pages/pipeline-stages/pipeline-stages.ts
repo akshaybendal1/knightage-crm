@@ -13,6 +13,7 @@ export class PipelineStages implements OnInit {
   stages = signal<PipelineStage[]>([]);
   loading = signal(false);
   errorMessage = signal<string | null>(null);
+  showForm = signal(false);
 
   name = '';
   sortOrder = 1;
@@ -53,6 +54,7 @@ export class PipelineStages implements OnInit {
         this.sortOrder = this.stages().length + 1;
         this.isWon = false;
         this.isLost = false;
+        this.showForm.set(false);
         this.load();
       },
       error: () => this.errorMessage.set('Could not create pipeline stage.'),

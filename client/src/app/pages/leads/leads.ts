@@ -15,6 +15,7 @@ export class Leads implements OnInit {
   leads = signal<Lead[]>([]);
   loading = signal(false);
   errorMessage = signal<string | null>(null);
+  showForm = signal(false);
 
   filterStageId = '';
 
@@ -96,6 +97,7 @@ export class Leads implements OnInit {
           this.phone = '';
           this.company = '';
           this.notes = '';
+          this.showForm.set(false);
           this.loadLeads();
         },
         error: () => this.errorMessage.set('Could not create lead.'),

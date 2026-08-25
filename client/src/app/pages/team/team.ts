@@ -15,6 +15,7 @@ export class Team implements OnInit {
   members = signal<TeamMember[]>([]);
   loading = signal(false);
   errorMessage = signal<string | null>(null);
+  showForm = signal(false);
 
   displayName = '';
   email = '';
@@ -69,6 +70,7 @@ export class Team implements OnInit {
           this.password = '';
           this.role = 'Member';
           this.adding.set(false);
+          this.showForm.set(false);
           this.load();
         },
         error: (err) => {

@@ -13,6 +13,26 @@
   --bs-gutter-y: 1rem;
 }
 
+/* kaiadmin's default .card-header/.card-body padding (1rem/1.25rem+1.25rem)
+   is sized for desktop -- on a ~375px phone, with several cards stacked
+   per page, that padding alone eats a large share of the usable width and
+   adds up to a lot of dead vertical space. Trim it below the tablet
+   breakpoint; desktop keeps kaiadmin's own spacing untouched. kaiadmin's
+   own rule is the compound selector `.card .card-header`/`.card .card-body`
+   (specificity 0,2,0) -- a bare `.card-header`/`.card-body` override loses
+   to it regardless of source order, so this has to match that shape. */
+@media (max-width: 767.98px) {
+  .card .card-header,
+  .card-light .card-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .card .card-body,
+  .card-light .card-body {
+    padding: 0.85rem 1rem;
+  }
+}
+
 /* Bootstrap tables have no built-in small-screen layout -- .table-responsive
    only adds horizontal scrolling, which on a phone means every column past
    the first one or two is cut off and has to be scrolled to sideways. Tables

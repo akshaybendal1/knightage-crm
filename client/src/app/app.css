@@ -108,3 +108,9 @@
 .page-inner {
   padding-top: 1.5rem;
 }
+
+@media (max-width: 767.98px) {
+  .page-inner {
+    padding-top: 1rem;
+  }
+}
