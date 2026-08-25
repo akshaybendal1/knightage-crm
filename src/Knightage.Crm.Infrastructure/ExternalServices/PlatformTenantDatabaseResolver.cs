@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Knightage.Crm.Core.Interfaces;
+using Knightage.Crm.Core.Tenancy;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 
@@ -29,10 +30,10 @@ public class PlatformTenantDatabaseResolver : ITenantDatabaseResolver
             ?? throw new InvalidOperationException("Tenancy:ServiceName is not configured.");
     }
 
-    public async Task<string?> ResolveAsync(Guid organizationId, string? authorizationHeader, CancellationToken cancellationToken = default)
+    public async Task<TenantResolution?> ResolveAsync(Guid organizationId, string? authorizationHeader, CancellationToken cancellationToken = default)
     {
         var cacheKey = $"tenant-db:{_serviceName}:{organizationId}";
-        if (_cache.TryGetValue<string>(cacheKey, out var cached))
+        if (_cache.TryGetValue<TenantResolution>(cacheKey, out var cached))
         {
             return cached;
         }
@@ -55,17 +56,24 @@ public class PlatformTenantDatabaseResolver : ITenantDatabaseResolver
             .FirstOrDefault(d => string.Equals(d.ServiceName, _serviceName, StringComparison.OrdinalIgnoreCase))
             ?.DatabaseName;
 
-        if (databaseName is not null)
+        if (databaseName is null)
         {
-            _cache.Set(cacheKey, databaseName, CacheDuration);
+            return null;
         }
 
-        return databaseName;
+        // Defaults to "Active" if knightage-platform's response is from a version that
+        // doesn't send a subscription block yet, rather than treating every tenant as
+        // Disabled the moment this field starts being read.
+        var resolution = new TenantResolution(databaseName, detail?.Subscription?.Status ?? "Active");
+        _cache.Set(cacheKey, resolution, CacheDuration);
+        return resolution;
     }
 
-    private record TenantDetailResponse(TenantResponse Tenant, List<ServiceDatabaseResponse> Databases);
+    private record TenantDetailResponse(TenantResponse Tenant, List<ServiceDatabaseResponse> Databases, SubscriptionResponse? Subscription);
 
     private record TenantResponse(Guid Id, Guid OrganizationId, string Name, string Slug, string Status);
 
     private record ServiceDatabaseResponse(Guid Id, Guid TenantId, string ServiceName, string DatabaseName, string Status);
+
+    private record SubscriptionResponse(string Status, DateTime? StartDate, DateTime? EndDate, int? GracePeriodDays, string? Notes);
 }

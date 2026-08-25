@@ -40,15 +40,33 @@ public class TenantResolutionMiddleware
             }
 
             var authorizationHeader = context.Request.Headers.Authorization.ToString();
-            var databaseName = await resolver.ResolveAsync(organizationId, authorizationHeader, context.RequestAborted);
-            if (databaseName is null)
+            var resolution = await resolver.ResolveAsync(organizationId, authorizationHeader, context.RequestAborted);
+            if (resolution is null)
             {
                 context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                 await context.Response.WriteAsJsonAsync(new { message = "This organization's tenant database is not available yet." });
                 return;
             }
 
-            tenantContext.DatabaseName = databaseName;
+            // "Disabled" blocks everything; "ReadOnly" only blocks writes (every mutating
+            // endpoint in this API is GET or POST -- PUT/DELETE aren't used, see
+            // TasksController/PipelineStagesController/LeadsController), so a GET still
+            // succeeds and existing data stays visible instead of the app going dark outright.
+            if (resolution.SubscriptionStatus == "Disabled")
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { message = "This organization's subscription has ended. Contact your account manager to reactivate." });
+                return;
+            }
+
+            if (resolution.SubscriptionStatus == "ReadOnly" && !HttpMethods.IsGet(context.Request.Method))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { message = "This organization's subscription has expired. The app is read-only until it's renewed." });
+                return;
+            }
+
+            tenantContext.DatabaseName = resolution.DatabaseName;
         }
 
         await _next(context);
