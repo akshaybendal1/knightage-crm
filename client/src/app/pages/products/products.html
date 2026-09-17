@@ -1,0 +1,128 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
+  <h3 class="fw-bold mb-0">Products</h3>
+  <button type="button" class="btn btn-primary btn-sm" data-tour="new-product-button" (click)="showForm.set(!showForm())">
+    {{ showForm() ? 'Close' : '+ New Product' }}
+  </button>
+</div>
+
+@if (showForm()) {
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">New product</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="createProduct()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="name">Name</label>
+            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="name" required placeholder="e.g. Premium plan" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="3" [(ngModel)]="description" placeholder="Optional description"></textarea>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="category">Category</label>
+            <select id="category" name="category" class="form-control" [(ngModel)]="category">
+              <option value="">— None —</option>
+              @for (cat of categories(); track cat.id) {
+                <option [value]="cat.name">{{ cat.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="price">Price</label>
+            <input id="price" name="price" type="number" min="0" step="0.01" class="form-control" [(ngModel)]="price" required placeholder="0.00" />
+          </div>
+          @if (errorMessage()) {
+            <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="savingProduct() || !name.trim() || price === null">{{ savingProduct() ? 'Adding...' : 'Add product' }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="card card-round mt-3">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-card-mobile">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of products(); track product.id) {
+              @if (editingId() === product.id) {
+                <tr>
+                  <td data-label="Name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ product.id }}" /></td>
+                  <td data-label="Description">
+                    <textarea class="form-control form-control-sm" rows="2" [(ngModel)]="editDescription" name="editDescription-{{ product.id }}"></textarea>
+                  </td>
+                  <td data-label="Category">
+                    <select class="form-control form-control-sm" [(ngModel)]="editCategory" name="editCategory-{{ product.id }}">
+                      <option value="">— None —</option>
+                      @for (cat of categories(); track cat.id) {
+                        <option [value]="cat.name">{{ cat.name }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td data-label="Price">
+                    <input type="number" min="0" step="0.01" class="form-control form-control-sm" [(ngModel)]="editPrice" name="editPrice-{{ product.id }}" />
+                  </td>
+                  <td data-label="Status">
+                    @if (product.isActive) {
+                      <span class="badge badge-success">Active</span>
+                    } @else {
+                      <span class="badge badge-secondary">Deactivated</span>
+                    }
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit() || editPrice === null" (click)="saveEdit(product.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td data-label="Name">{{ product.name }}</td>
+                  <td data-label="Description" class="text-muted">{{ product.description || '—' }}</td>
+                  <td data-label="Category" class="text-muted">{{ product.category || '—' }}</td>
+                  <td data-label="Price">{{ product.price | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
+                  <td data-label="Status">
+                    @if (product.isActive) {
+                      <span class="badge badge-success">Active</span>
+                    } @else {
+                      <span class="badge badge-secondary">Deactivated</span>
+                    }
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(product)">Edit</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="toggleActive(product)">
+                      {{ product.isActive ? 'Deactivate' : 'Reactivate' }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="6" class="text-muted">No products yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

@@ -6,4 +6,7 @@ public record PipelineStageRequest(
     [Required] string Name,
     [Required] int SortOrder,
     bool IsWon = false,
-    bool IsLost = false);
+    bool IsLost = false,
+    bool IsDefault = false);
+
+public record PipelineStageStatusRequest(bool IsActive);

@@ -1,0 +1,36 @@
+@if (open()) {
+  <div class="whatsapp-bulk-picker-backdrop" (click)="close()">
+    <div class="card card-round whatsapp-bulk-picker-card" (click)="$event.stopPropagation()">
+      <div class="card-header">
+        <div class="card-title">Message {{ selectedCount() }} lead(s)</div>
+      </div>
+      <div class="card-body">
+        <div class="form-group mb-2">
+          <label class="form-label small">Template</label>
+          <select
+            class="form-select form-select-sm"
+            [(ngModel)]="selectedTemplateId"
+            (ngModelChange)="onTemplateChange()"
+            name="bulkTemplate"
+          >
+            <option value="">Custom message</option>
+            @for (t of activeTemplates(); track t.id) {
+              <option [value]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group mb-2">
+          <label class="form-label small">Message</label>
+          <textarea class="form-control form-control-sm" rows="3" [(ngModel)]="messageText" name="bulkMessageText"></textarea>
+          <span class="text-muted small">
+            <code>{{ '{{leadName}}' }}</code> and <code>{{ '{{yourName}}' }}</code> will be filled in for each lead.
+          </span>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary btn-sm" (click)="confirm()">Review &amp; Send</button>
+          <button type="button" class="btn btn-label-secondary btn-sm" (click)="close()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

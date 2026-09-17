@@ -1,5 +1,8 @@
 export const environment = {
-  // Used only under `ng serve`, where the dev server (localhost:4200) is a different
-  // origin than the API. Change this if you run the API on a different port locally.
-  apiBaseUrl: 'http://localhost:5105',
+  // Empty so /api calls stay relative to localhost:4200 and go through
+  // proxy.conf.json (see angular.json's serve.development.proxyConfig),
+  // which forwards them to production server-side -- a direct absolute URL
+  // here would make the browser call crm.knightagetech.com cross-origin,
+  // which production's CORS policy doesn't allow from a dev origin.
+  apiBaseUrl: '',
 };

@@ -1,0 +1,8 @@
+{
+  "/api": {
+    "target": "https://crm.knightagetech.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

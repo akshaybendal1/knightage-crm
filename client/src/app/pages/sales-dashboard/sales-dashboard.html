@@ -1,0 +1,139 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
+  <h3 class="fw-bold mb-0" data-tour="page-header">Sales Dashboard</h3>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+}
+
+<div class="row mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card card-round">
+      <div class="card-body">
+        <div class="text-muted small">Entries</div>
+        <div class="h4 mb-0">{{ totalCount() }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-round">
+      <div class="card-body">
+        <div class="text-muted small">Total value</div>
+        <div class="h4 mb-0">{{ totalValue() | number: '1.2-2' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@if (isAdminView()) {
+  <div class="card card-round mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div class="card-title">Sales by rep</div>
+      <div class="range-toggle">
+        <button type="button" class="btn btn-sm" [class.btn-primary]="salesByRepMetric() === 'count'" [class.btn-label-light]="salesByRepMetric() !== 'count'" (click)="setSalesByRepMetric('count')">Count</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="salesByRepMetric() === 'value'" [class.btn-label-light]="salesByRepMetric() !== 'value'" (click)="setSalesByRepMetric('value')">Value</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="range-toggle mb-3">
+        <button type="button" class="btn btn-sm" [class.btn-primary]="salesByRepRange() === 'week'" [class.btn-label-light]="salesByRepRange() !== 'week'" (click)="setSalesByRepRange('week')">This week</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="salesByRepRange() === 'month'" [class.btn-label-light]="salesByRepRange() !== 'month'" (click)="setSalesByRepRange('month')">This month</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="salesByRepRange() === 'all'" [class.btn-label-light]="salesByRepRange() !== 'all'" (click)="setSalesByRepRange('all')">All time</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="salesByRepRange() === 'custom'" [class.btn-label-light]="salesByRepRange() !== 'custom'" (click)="setSalesByRepRange('custom')">Custom</button>
+      </div>
+
+      @if (salesByRepRange() === 'custom') {
+        <div class="d-flex align-items-end flex-wrap gap-2 mb-3">
+          <div class="form-group mb-0">
+            <label class="form-label" for="salesByRepFrom">From</label>
+            <input id="salesByRepFrom" name="salesByRepFrom" type="date" class="form-control form-control-sm" [(ngModel)]="salesByRepCustomFrom" [max]="salesByRepCustomTo || null" />
+          </div>
+          <div class="form-group mb-0">
+            <label class="form-label" for="salesByRepTo">To</label>
+            <input id="salesByRepTo" name="salesByRepTo" type="date" class="form-control form-control-sm" [(ngModel)]="salesByRepCustomTo" [min]="salesByRepCustomFrom || null" />
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" (click)="applySalesByRepCustomRange()">Apply</button>
+          @if (salesByRepCustomRangeError()) {
+            <span class="text-danger small">{{ salesByRepCustomRangeError() }}</span>
+          }
+        </div>
+      }
+
+      @if (salesByRepError()) {
+        <div class="alert alert-danger py-2">{{ salesByRepError() }}</div>
+      }
+
+      @if (salesByRepLoading()) {
+        <app-loader size="sm" />
+      } @else if (salesByRepRows().length === 0) {
+        <p class="text-muted mb-0">No sales entries in this range yet.</p>
+      } @else {
+        <app-chart-bar [points]="salesByRepPoints()" [seriesLabel]="salesByRepMetric() === 'count' ? 'Entries' : 'Total value'" />
+      }
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <label class="form-label mb-0" for="repFilter">Rep</label>
+    <select id="repFilter" class="form-select" style="max-width: 260px;" [(ngModel)]="selectedRepId" (ngModelChange)="load()">
+      <option value="">All reps</option>
+      @for (rep of reps(); track rep.id) {
+        <option [value]="rep.id">{{ rep.displayName }}</option>
+      }
+    </select>
+  </div>
+}
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="card card-round">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-card-mobile">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Products</th>
+              <th>Value</th>
+              @if (isAdminView()) {
+                <th>Rep</th>
+              }
+              <th>Date</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of entries(); track entry.id) {
+              <tr>
+                <td data-label="Customer">
+                  {{ entry.name }}
+                  @if (entry.email || entry.phone) {
+                    <div class="text-muted small">{{ entry.email }} {{ entry.phone }}</div>
+                  }
+                </td>
+                <td data-label="Products">{{ entry.products || '—' }}</td>
+                <td data-label="Value">{{ entry.totalCost | number: '1.2-2' }}</td>
+                @if (isAdminView()) {
+                  <td data-label="Rep">{{ entry.ownerDisplayName || '—' }}</td>
+                }
+                <td data-label="Date" class="text-muted">{{ entry.createdAtUtc | date: 'medium' }}</td>
+                <td data-label="Location">
+                  @if (mapUrl(entry); as url) {
+                    <a [href]="url" target="_blank" rel="noopener">View on map</a>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td [attr.colspan]="isAdminView() ? 6 : 5" class="text-muted">No sales entries yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

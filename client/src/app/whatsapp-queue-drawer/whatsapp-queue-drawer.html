@@ -1,0 +1,42 @@
+@if (open()) {
+  <div class="whatsapp-queue-backdrop" (click)="close()">
+    <aside class="whatsapp-queue-drawer" (click)="$event.stopPropagation()">
+      <div class="whatsapp-queue-header">
+        <h5 class="fw-bold mb-0">Send WhatsApp messages</h5>
+        <button type="button" class="btn btn-label-secondary btn-sm" (click)="close()">Close</button>
+      </div>
+
+      @if (skippedCount() > 0) {
+        <div class="alert alert-warning py-2 mb-3">{{ skippedCount() }} lead(s) skipped — no phone number.</div>
+      }
+
+      <div class="whatsapp-queue-list">
+        @for (row of resolvedRows(); track row.lead.id) {
+          <div class="whatsapp-queue-row" [class.opened]="isOpened(row.lead.id)">
+            <div class="whatsapp-queue-row-info">
+              <div class="fw-bold">{{ row.lead.name }}</div>
+              <div class="text-muted small">{{ row.message }}</div>
+            </div>
+            <a
+              [href]="row.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-sm"
+              [class.btn-primary]="!isOpened(row.lead.id)"
+              [class.btn-label-secondary]="isOpened(row.lead.id)"
+              (click)="markOpened(row.lead.id)"
+            >
+              @if (isOpened(row.lead.id)) {
+                <i class="fas fa-check"></i> Opened
+              } @else {
+                <i class="fab fa-whatsapp"></i> Send
+              }
+            </a>
+          </div>
+        } @empty {
+          <p class="text-muted">No selected leads have a phone number.</p>
+        }
+      </div>
+    </aside>
+  </div>
+}

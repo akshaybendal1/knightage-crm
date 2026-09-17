@@ -1,0 +1,1 @@
+ALTER TABLE Products ADD Category NVARCHAR(100) NULL;

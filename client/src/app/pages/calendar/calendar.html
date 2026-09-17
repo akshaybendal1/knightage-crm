@@ -1,0 +1,82 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
+  <h3 class="fw-bold mb-0">Calendar</h3>
+  @if (canSeeTeam()) {
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm" [class.btn-primary]="viewScope() === 'mine'" [class.btn-label-light]="viewScope() !== 'mine'" (click)="setScope('mine')">My tasks</button>
+      <button type="button" class="btn btn-sm" [class.btn-primary]="viewScope() === 'team'" [class.btn-label-light]="viewScope() !== 'team'" (click)="setScope('team')">Whole team</button>
+    </div>
+  }
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div class="d-flex align-items-center gap-2">
+    <button type="button" class="btn btn-label-secondary btn-sm" (click)="previousMonth()" aria-label="Previous month">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <button type="button" class="btn btn-label-secondary btn-sm" (click)="nextMonth()" aria-label="Next month">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+    <button type="button" class="btn btn-label-light btn-sm" (click)="goToToday()">Today</button>
+  </div>
+  <span class="fw-bold">{{ monthLabel() }}</span>
+</div>
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="calendar-grid">
+    @for (label of weekdayLabels; track label) {
+      <div class="calendar-weekday">{{ label }}</div>
+    }
+    @for (day of gridDays(); track day.getTime()) {
+      <div class="calendar-day" [class.outside-month]="!isCurrentMonth(day)" [class.is-today]="isToday(day)">
+        <span class="calendar-day-number">{{ day.getDate() }}</span>
+        @for (task of tasksForDay(day).slice(0, 3); track task.id) {
+          <button type="button" class="calendar-chip" [class.chip-overdue]="chipStatus(task) === 'overdue'" [class.chip-due-today]="chipStatus(task) === 'due-today'" [class.chip-upcoming]="chipStatus(task) === 'upcoming'" [class.chip-completed]="chipStatus(task) === 'completed'" (click)="openTask(task)" [title]="task.title">
+            {{ task.title }}
+          </button>
+        }
+        @if (isExpanded(day)) {
+          @for (task of tasksForDay(day).slice(3); track task.id) {
+            <button type="button" class="calendar-chip" [class.chip-overdue]="chipStatus(task) === 'overdue'" [class.chip-due-today]="chipStatus(task) === 'due-today'" [class.chip-upcoming]="chipStatus(task) === 'upcoming'" [class.chip-completed]="chipStatus(task) === 'completed'" (click)="openTask(task)" [title]="task.title">
+              {{ task.title }}
+            </button>
+          }
+        } @else if (tasksForDay(day).length > 3) {
+          <button type="button" class="calendar-day-more" (click)="toggleExpand(day)">+{{ tasksForDay(day).length - 3 }} more</button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="calendar-agenda">
+    @for (entry of agendaDays(); track trackByDay($index, entry)) {
+      <div class="calendar-agenda-day" [class.is-today]="isToday(entry.day)">
+        <div class="calendar-agenda-heading">{{ entry.day | date: 'EEEE, MMM d' }}</div>
+        @if (entry.tasks.length > 0) {
+          <ul class="task-list">
+            @for (task of entry.tasks; track trackByTask($index, task)) {
+              <li class="task-item" [class.overdue]="chipStatus(task) === 'overdue'" [class.completed]="chipStatus(task) === 'completed'" (click)="openTask(task)">
+                <div>
+                  <div class="task-title">{{ task.title }}</div>
+                  <div class="text-muted small">{{ task.leadName }}</div>
+                  @if (viewScope() === 'team') {
+                    <span class="badge badge-secondary mt-1">{{ assigneeLabel(task.assignedToUserId) }}</span>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="text-muted small mb-0">No tasks today.</p>
+        }
+      </div>
+    } @empty {
+      <p class="text-muted">No tasks this month.</p>
+    }
+  </div>
+}

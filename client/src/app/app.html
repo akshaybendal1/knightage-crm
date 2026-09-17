@@ -1,119 +1,294 @@
-@if (auth.isAuthenticated()) {
-  <div class="wrapper">
-    <div class="sidebar" data-background-color="dark">
-      <div class="sidebar-logo">
-        <div class="logo-header" data-background-color="dark">
-          <a routerLink="/dashboard" class="logo">
-            <span class="brand-text">Knightage CRM</span>
-          </a>
-        </div>
-      </div>
-      <div class="sidebar-wrapper scrollbar scrollbar-inner">
-        <div class="sidebar-content">
-          <ul class="nav nav-secondary">
-            <li class="nav-item" routerLinkActive="active">
-              <a routerLink="/dashboard" (click)="closeSidebar()">
-                <i class="fas fa-home"></i>
-                <p>Dashboard</p>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active">
-              <a routerLink="/leads" (click)="closeSidebar()">
-                <i class="fas fa-user-tie"></i>
-                <p>Leads</p>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active">
-              <a routerLink="/pipeline-stages" (click)="closeSidebar()">
-                <i class="fas fa-stream"></i>
-                <p>Pipeline Stages</p>
-              </a>
-            </li>
-            <li class="nav-item" routerLinkActive="active">
-              <a routerLink="/tasks" (click)="closeSidebar()">
-                <i class="fas fa-check-square"></i>
-                <p>Tasks</p>
-                @if (dueTaskCount() > 0) {
-                  <span class="badge badge-danger">{{ dueTaskCount() }}</span>
-                }
-              </a>
-            </li>
-            @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
-              <li class="nav-item" routerLinkActive="active">
-                <a routerLink="/team" (click)="closeSidebar()">
-                  <i class="fas fa-users-cog"></i>
-                  <p>Team</p>
-                </a>
-              </li>
-            }
-          </ul>
-        </div>
-      </div>
-    </div>
+<app-toast-container />
 
-    <div class="main-panel">
-      <div class="main-header">
-        <div class="main-header-logo">
-          <div class="logo-header" data-background-color="dark">
-            <a routerLink="/dashboard" class="logo">
-              <span class="brand-text">Knightage CRM</span>
+@if (auth.isAuthenticated()) {
+  <div class="shell">
+    <div class="sidebar-backdrop" [class.visible]="sidebarOpen()" (click)="closeSidebar()"></div>
+
+    <aside class="sidebar" [class.open]="sidebarOpen()" [class.desktop-hidden]="!desktopSidebarVisible()">
+      <div class="sidebar-brand">
+        <a routerLink="/dashboard" class="brand-link" (click)="closeSidebar()">
+          @if (branding.logoUrl(); as logoUrl) {
+            <img [src]="logoUrl" class="brand-logo" alt="Logo" />
+          } @else {
+            <span class="brand-text">CRM</span>
+          }
+        </a>
+        @if (organizationName()) {
+          <span class="sidebar-org-name" [title]="organizationName()">{{ organizationName() }}</span>
+        }
+      </div>
+      <nav class="sidebar-nav">
+        @if (auth.currentUser()?.role === 'Sales') {
+          @if (orgFeatures.fieldForceTrackingEnabled()) {
+            <div class="nav-section-label">Main</div>
+            <a routerLink="/sales-entry" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+              <i class="fas fa-plus-circle"></i>
+              <span>Add Sales Entry</span>
             </a>
-            <button class="btn btn-toggle sidebar-toggle-btn" type="button" (click)="toggleSidebar()" aria-label="Toggle menu">
-              <i class="fas fa-bars"></i>
+            <a routerLink="/sales-dashboard" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+              <i class="fas fa-chart-bar"></i>
+              <span>Sales Dashboard</span>
+            </a>
+          }
+        } @else {
+          <div class="nav-section-label">Main</div>
+          <a routerLink="/dashboard" class="nav-link" routerLinkActive="active" data-tour="nav-dashboard" (click)="closeSidebar()">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+          </a>
+          <a routerLink="/leads" class="nav-link" routerLinkActive="active" data-tour="nav-leads" (click)="closeSidebar()">
+            <i class="fas fa-user-tie"></i>
+            <span>Leads</span>
+          </a>
+          <a routerLink="/tasks" class="nav-link" routerLinkActive="active" data-tour="nav-tasks" (click)="closeSidebar()">
+            <i class="fas fa-check-square"></i>
+            <span>Tasks</span>
+            @if (dueTaskCount() > 0) {
+              <span class="nav-badge">{{ dueTaskCount() }}</span>
+            }
+          </a>
+          <a routerLink="/calendar" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Calendar</span>
+          </a>
+
+          <button type="button" class="nav-link nav-group-toggle" data-tour="nav-pipeline-stages" (click)="toggleNavGroup('pipeline')">
+            <i class="fas fa-stream"></i>
+            <span>Pipeline</span>
+            <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('pipeline')"></i>
+          </button>
+          @if (isNavGroupOpen('pipeline')) {
+            <div class="nav-submenu">
+              <a routerLink="/pipeline-stages" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                <i class="fas fa-stream"></i>
+                <span>Pipeline Stages</span>
+              </a>
+              <a routerLink="/timeline" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                <i class="fas fa-history"></i>
+                <span>Timeline</span>
+              </a>
+            </div>
+          }
+
+          @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
+            <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('catalog')">
+              <i class="fas fa-box"></i>
+              <span>Catalog</span>
+              <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('catalog')"></i>
             </button>
+            @if (isNavGroupOpen('catalog')) {
+              <div class="nav-submenu">
+                <a routerLink="/products" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-box"></i>
+                  <span>Products</span>
+                </a>
+                <a routerLink="/product-categories" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-tags"></i>
+                  <span>Product Categories</span>
+                </a>
+              </div>
+            }
+
+            <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('insights')">
+              <i class="fas fa-chart-line"></i>
+              <span>Insights</span>
+              <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('insights')"></i>
+            </button>
+            @if (isNavGroupOpen('insights')) {
+              <div class="nav-submenu">
+                <a routerLink="/reports" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-chart-line"></i>
+                  <span>Reports</span>
+                </a>
+              </div>
+            }
+
+            <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('settings')">
+              <i class="fas fa-users-cog"></i>
+              <span>Settings</span>
+              <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('settings')"></i>
+            </button>
+            @if (isNavGroupOpen('settings')) {
+              <div class="nav-submenu">
+                <a routerLink="/team" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-users-cog"></i>
+                  <span>Team</span>
+                </a>
+                <a routerLink="/message-templates" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-comment-dots"></i>
+                  <span>Message Templates</span>
+                </a>
+                <a routerLink="/organization" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-building"></i>
+                  <span>Organization</span>
+                </a>
+              </div>
+            }
+
+            @if (orgFeatures.fieldForceTrackingEnabled()) {
+              <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('fieldSales')">
+                <i class="fas fa-plus-circle"></i>
+                <span>Field Sales</span>
+                <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('fieldSales')"></i>
+              </button>
+              @if (isNavGroupOpen('fieldSales')) {
+                <div class="nav-submenu">
+                  <a routerLink="/sales-entry" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add Sales Entry</span>
+                  </a>
+                  <a routerLink="/sales-dashboard" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Sales Dashboard</span>
+                  </a>
+                  <a routerLink="/sales-coverage" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                    <i class="fas fa-map-location-dot"></i>
+                    <span>Sales Coverage</span>
+                  </a>
+                </div>
+              }
+            }
+          }
+          <div class="nav-section-label">Support</div>
+          <a routerLink="/contact-us" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+            <i class="fas fa-envelope"></i>
+            <span>Contact Us</span>
+          </a>
+        }
+      </nav>
+    </aside>
+
+    <div class="main" [class.sidebar-hidden]="!desktopSidebarVisible()">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" class="icon-btn sidebar-toggle" (click)="toggleSidebar()" aria-label="Toggle menu" title="Toggle sidebar">
+            <i class="fas fa-bars"></i>
+          </button>
+          <a routerLink="/dashboard" class="topbar-brand">
+            <span class="brand-text">CRM</span>
+          </a>
+          @if (organizationName()) {
+            <span class="topbar-org-name" [title]="organizationName()">{{ organizationName() }}</span>
+          }
+        </div>
+
+        <div class="topbar-right">
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="theme.toggle()"
+            [title]="theme.current() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+          >
+            <i class="fa" [class.fa-sun]="theme.current() === 'dark'" [class.fa-moon]="theme.current() === 'light'"></i>
+          </button>
+          <a class="icon-btn" routerLink="/tasks" title="Due tasks">
+            <i class="fa fa-bell"></i>
+            @if (dueTaskCount() > 0) {
+              <span class="notif-dot">{{ dueTaskCount() }}</span>
+            }
+          </a>
+          <button type="button" class="icon-btn" (click)="tour.replay()" title="Replay product tour">
+            <i class="fa fa-question-circle"></i>
+          </button>
+          <div class="user-menu">
+            <button type="button" class="user-menu-trigger" (click)="toggleUserMenu($event)">
+              <span class="user-avatar">{{ initials() }}</span>
+              <span class="user-name">
+                <span class="user-greeting">Hi,</span>
+                <span class="user-display-name">{{ auth.currentUser()?.displayName }}</span>
+              </span>
+            </button>
+            <div class="dropdown-menu user-dropdown" [class.show]="userMenuOpen()">
+              <div class="user-dropdown-header">
+                <span class="user-avatar user-avatar-lg">{{ initials() }}</span>
+                <div>
+                  <div class="user-dropdown-name">{{ auth.currentUser()?.displayName }}</div>
+                  <div class="user-dropdown-email">{{ auth.currentUser()?.email }}</div>
+                  <span class="badge badge-secondary mt-1">{{ auth.currentUser()?.role }}</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" routerLink="/profile" (click)="userMenuOpen.set(false)">My Profile</a>
+              <a class="dropdown-item" href="javascript:void(0)" (click)="auth.logout()">Logout</a>
+            </div>
           </div>
         </div>
-        <div class="main-header-topbar d-flex align-items-center justify-content-end border-bottom">
-          <ul class="navbar-nav topbar-nav d-flex flex-row align-items-center mb-0">
-            <li class="nav-item topbar-icon hidden-caret">
-              <a class="nav-link" routerLink="/tasks" title="Due tasks">
-                <i class="fa fa-bell"></i>
-                @if (dueTaskCount() > 0) {
-                  <span class="notification">{{ dueTaskCount() }}</span>
-                }
-              </a>
-            </li>
-            <li class="nav-item topbar-user dropdown hidden-caret">
-              <a class="dropdown-toggle profile-pic" href="javascript:void(0)" (click)="toggleUserMenu($event)">
-                <span class="user-avatar user-avatar-sm">{{ initials() }}</span>
-                <span class="profile-username">
-                  <span class="op-7">Hi,</span>
-                  <span class="fw-bold">{{ auth.currentUser()?.displayName }}</span>
-                </span>
-              </a>
-              <ul class="dropdown-menu dropdown-user animated fadeIn" [class.show]="userMenuOpen()">
-                <li>
-                  <div class="user-box">
-                    <span class="user-avatar user-avatar-lg">{{ initials() }}</span>
-                    <div class="u-text">
-                      <h4>{{ auth.currentUser()?.displayName }}</h4>
-                      <p class="text-muted">{{ auth.currentUser()?.email }}</p>
-                      <span class="badge badge-secondary">{{ auth.currentUser()?.role }}</span>
-                    </div>
-                  </div>
-                </li>
-                <li>
-                  <div class="dropdown-divider"></div>
-                  <a class="dropdown-item" href="javascript:void(0)" (click)="auth.logout()">Logout</a>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </div>
+      </header>
 
-      <div class="container">
-        <div class="page-inner">
-          <router-outlet />
+      @if (subscriptionStatus() && subscriptionStatus() !== 'Active') {
+        <div class="subscription-banner alert" [class.alert-warning]="subscriptionStatus() !== 'Disabled'" [class.alert-danger]="subscriptionStatus() === 'Disabled'">
+          @switch (subscriptionStatus()) {
+            @case ('NotSubscribed') {
+              <span>Your organization hasn't set up a subscription yet.</span>
+              @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
+                <a routerLink="/organization">Request one</a>
+              } @else {
+                <span>Contact your admin to request one.</span>
+              }
+            }
+            @case ('ReadOnly') {
+              <span>Your subscription is in its grace period — changes are disabled until it's renewed.</span>
+            }
+            @case ('Disabled') {
+              <span>Your subscription has expired. Contact your administrator.</span>
+            }
+          }
         </div>
-      </div>
+      }
+
+      <main class="page-content">
+        <router-outlet />
+      </main>
 
       <footer class="footer">
-        <div class="container-fluid d-flex justify-content-center">
-          <div class="copyright">Knightage CRM</div>
+        <div class="footer-content">
+          <div class="footer-brand">
+            <span class="copyright">&copy; {{ currentYear }} Knightage Tech. All rights reserved.</span>
+          </div>
+          <nav class="footer-links">
+            <a routerLink="/contact-us">Contact Us</a>
+            <a href="mailto:contact@knightagetech.com">contact&#64;knightagetech.com</a>
+          </nav>
         </div>
       </footer>
     </div>
+
+    <nav class="bottom-nav" aria-label="Primary">
+      @if (auth.currentUser()?.role === 'Sales') {
+        <a routerLink="/sales-entry" routerLinkActive="active" class="bottom-nav-item">
+          <i class="fas fa-plus-circle"></i>
+          <span>Add Entry</span>
+        </a>
+        <a routerLink="/sales-dashboard" routerLinkActive="active" class="bottom-nav-item">
+          <i class="fas fa-chart-bar"></i>
+          <span>Dashboard</span>
+        </a>
+      } @else {
+        <a routerLink="/dashboard" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-dashboard">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </a>
+        <a routerLink="/leads" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-leads">
+          <i class="fas fa-user-tie"></i>
+          <span>Leads</span>
+        </a>
+        <a routerLink="/tasks" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-tasks">
+          <i class="fas fa-check-square"></i>
+          <span>Tasks</span>
+          @if (dueTaskCount() > 0) {
+            <span class="bottom-nav-dot"></span>
+          }
+        </a>
+        <a routerLink="/pipeline-stages" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-pipeline-stages">
+          <i class="fas fa-stream"></i>
+          <span>Pipeline</span>
+        </a>
+      }
+      <button type="button" class="bottom-nav-item" (click)="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+        <span>More</span>
+      </button>
+    </nav>
   </div>
 } @else {
   <router-outlet />

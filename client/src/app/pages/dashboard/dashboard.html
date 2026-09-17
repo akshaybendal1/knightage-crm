@@ -8,35 +8,44 @@
   <div class="alert alert-danger">{{ errorMessage() }}</div>
 }
 
-<div class="row">
+@if (loading()) {
+  <app-loader />
+} @else {
+
+<div class="row mb-3">
   <div class="col-md-12">
-    <div class="card card-round">
-      <div class="card-header">
+    <div class="card card-round" data-tour="pipeline-overview">
+      <div class="card-header d-flex align-items-center justify-content-between">
         <div class="card-title">Pipeline overview</div>
+        <div class="range-toggle">
+          <button type="button" class="btn btn-sm" [class.btn-primary]="pipelineMode() === 'count'" [class.btn-label-light]="pipelineMode() !== 'count'" (click)="setPipelineMode('count')">Count</button>
+          <button type="button" class="btn btn-sm" [class.btn-primary]="pipelineMode() === 'value'" [class.btn-label-light]="pipelineMode() !== 'value'" (click)="setPipelineMode('value')">Value</button>
+        </div>
       </div>
       <div class="card-body">
-        <ul class="pipeline-bars">
+        <div class="pipeline-cards">
           @for (stage of pipelineSummary(); track stage.stageId) {
-            <li>
-              <a class="pipeline-row" [routerLink]="['/leads']" [queryParams]="{ pipelineStageId: stage.stageId }">
-                <span class="pipeline-name">{{ stage.stageName }}</span>
-                <span class="pipeline-bar-track">
-                  <span class="pipeline-bar-fill" [style.width.%]="barWidth(stage.leadCount)"></span>
-                </span>
-                <span class="pipeline-count">{{ stage.leadCount }}</span>
-              </a>
-            </li>
+            <a class="pipeline-card" [routerLink]="['/leads']" [queryParams]="{ pipelineStageId: stage.stageId }">
+              <span class="pipeline-card-name">{{ stage.stageName }}</span>
+              <span class="pipeline-card-value">
+                @if (pipelineMode() === 'value') {
+                  {{ stage.leadValue | currency: 'INR' : 'symbol' : '1.0-0' }}
+                } @else {
+                  {{ stage.leadCount }}
+                }
+              </span>
+            </a>
           } @empty {
-            <li class="text-muted">No pipeline stages yet.</li>
+            <span class="text-muted">No pipeline stages yet.</span>
           }
-        </ul>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <div class="row">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="card card-round h-100">
       <div class="card-header">
         <div class="card-title">Won / Lost</div>
@@ -47,15 +56,23 @@
           <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'month'" [class.btn-label-light]="range() !== 'month'" (click)="setRange('month')">This month</button>
           <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'all'" [class.btn-label-light]="range() !== 'all'" (click)="setRange('all')">All time</button>
         </div>
-        @if (wonLost(); as wl) {
+        @if (wonLostLoading()) {
+          <app-loader size="sm" />
+        } @else if (wonLost(); as wl) {
           <div class="stat-pair">
-            <div class="stat-tile won">
-              <span class="stat-value">{{ wl.won }}</span>
-              <span class="stat-label">Won</span>
+            <div class="stat-tile-row">
+              <span class="stat-icon won"><i class="fas fa-trophy"></i></span>
+              <div class="stat-tile won">
+                <span class="stat-value">{{ wl.won }}</span>
+                <span class="stat-label">Won</span>
+              </div>
             </div>
-            <div class="stat-tile lost">
-              <span class="stat-value">{{ wl.lost }}</span>
-              <span class="stat-label">Lost</span>
+            <div class="stat-tile-row">
+              <span class="stat-icon lost"><i class="fas fa-times-circle"></i></span>
+              <div class="stat-tile lost">
+                <span class="stat-value">{{ wl.lost }}</span>
+                <span class="stat-label">Lost</span>
+              </div>
             </div>
           </div>
         }
@@ -63,31 +80,62 @@
     </div>
   </div>
 
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="card card-round h-100">
       <div class="card-header">
         <div class="card-title">Activity this week</div>
       </div>
       <div class="card-body">
-        <div class="stat-tile">
-          <span class="stat-value">{{ activityCount() ?? '—' }}</span>
-          <span class="stat-label">notes, stage changes &amp; task completions logged</span>
+        <div class="stat-tile-row">
+          <span class="stat-icon activity"><i class="fas fa-bolt"></i></span>
+          <div class="stat-tile">
+            <span class="stat-value">{{ activityCount() ?? '—' }}</span>
+            <span class="stat-label">notes, stage changes &amp; task completions logged</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4">
+  <div class="col-md-3">
     <a class="card card-round h-100 d-block text-decoration-none text-reset" [routerLink]="['/tasks']" [queryParams]="{ scope: 'all' }">
       <div class="card-header">
         <div class="card-title">Overdue tasks</div>
       </div>
       <div class="card-body">
-        <div class="stat-tile overdue">
-          <span class="stat-value">{{ overdueTaskCount() ?? '—' }}</span>
-          <span class="stat-label">across the whole team</span>
+        <div class="stat-tile-row">
+          <span class="stat-icon overdue"><i class="fas fa-exclamation-triangle"></i></span>
+          <div class="stat-tile overdue">
+            <span class="stat-value">{{ overdueTaskCount() ?? '—' }}</span>
+            <span class="stat-label">across the whole team</span>
+          </div>
         </div>
       </div>
     </a>
   </div>
+
+  <div class="col-md-3">
+    <div class="card card-round h-100">
+      <div class="card-header">
+        <div class="card-title">Stuck leads</div>
+      </div>
+      <div class="card-body">
+        <div class="stat-tile-row">
+          <span class="stat-icon stuck"><i class="fas fa-hourglass-half"></i></span>
+          <div class="stat-tile stuck">
+            <span class="stat-value">{{ stuckLeadsCount() ?? '—' }}</span>
+            <span class="stat-label">no stage/status change in 14+ days</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<div class="row mt-3">
+  <div class="col-md-12">
+    <app-upcoming-reminders />
+  </div>
+</div>
+
+}

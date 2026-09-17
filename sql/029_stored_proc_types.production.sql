@@ -1,0 +1,35 @@
+CREATE TYPE appuser.LeadTvp AS TABLE (
+    Id UNIQUEIDENTIFIER NOT NULL,
+    Name NVARCHAR(200) NOT NULL,
+    Email NVARCHAR(320) NULL,
+    Phone NVARCHAR(50) NULL,
+    Company NVARCHAR(200) NULL,
+    PipelineStageId UNIQUEIDENTIFIER NOT NULL,
+    Notes NVARCHAR(1000) NULL,
+    Source NVARCHAR(50) NOT NULL,
+    OwnerUserId NVARCHAR(100) NULL,
+    CreatedByUserId NVARCHAR(100) NULL,
+    CreatedAtUtc DATETIME2 NOT NULL,
+    PipelineStageChangedAtUtc DATETIME2 NULL
+);
+GO
+
+CREATE TYPE appuser.LeadActivityTvp AS TABLE (
+    Id UNIQUEIDENTIFIER NOT NULL,
+    LeadId UNIQUEIDENTIFIER NOT NULL,
+    Type NVARCHAR(50) NOT NULL,
+    Content NVARCHAR(2000) NOT NULL,
+    Metadata NVARCHAR(MAX) NULL,
+    CreatedByUserId NVARCHAR(100) NULL,
+    CreatedAtUtc DATETIME2 NOT NULL
+);
+GO
+
+CREATE TYPE appuser.DocumentLineItemTvp AS TABLE (
+    Id UNIQUEIDENTIFIER NOT NULL,
+    ProductName NVARCHAR(200) NOT NULL,
+    Quantity INT NOT NULL,
+    UnitPrice DECIMAL(18,2) NOT NULL,
+    LineTotal DECIMAL(18,2) NOT NULL
+);
+GO

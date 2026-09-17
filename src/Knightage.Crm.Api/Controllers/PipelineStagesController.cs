@@ -31,7 +31,8 @@ public class PipelineStagesController : ControllerBase
             SortOrder = request.SortOrder,
             IsActive = true,
             IsWon = request.IsWon,
-            IsLost = request.IsLost
+            IsLost = request.IsLost,
+            IsDefault = request.IsDefault
         };
         await _repository.CreateAsync(stage);
         return Ok(stage);
@@ -50,8 +51,22 @@ public class PipelineStagesController : ControllerBase
         existing.SortOrder = request.SortOrder;
         existing.IsWon = request.IsWon;
         existing.IsLost = request.IsLost;
+        existing.IsDefault = request.IsDefault;
 
         await _repository.UpdateAsync(existing);
         return Ok(existing);
+    }
+
+    [HttpPost("{id:guid}/status")]
+    public async Task<IActionResult> SetStatus(Guid id, PipelineStageStatusRequest request)
+    {
+        var existing = await _repository.GetByIdAsync(id);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        await _repository.SetActiveAsync(id, request.IsActive);
+        return NoContent();
     }
 }

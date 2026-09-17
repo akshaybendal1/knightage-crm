@@ -1,6 +1,17 @@
-<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
-  <h3 class="fw-bold mb-0">Pipeline Stages</h3>
-  <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
+  <h3 class="fw-bold mb-0">Stages</h3>
+</div>
+
+<div class="d-flex gap-2 pb-3">
+  <button type="button" class="btn btn-sm" [class.btn-primary]="activeTab() === 'pipeline'" [class.btn-label-light]="activeTab() !== 'pipeline'" (click)="activeTab.set('pipeline')">Pipeline Stages</button>
+  <button type="button" class="btn btn-sm" [class.btn-primary]="activeTab() === 'product'" [class.btn-label-light]="activeTab() !== 'product'" (click)="activeTab.set('product')">Product Stages</button>
+</div>
+
+@if (activeTab() === 'pipeline') {
+
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pb-3">
+  <h4 class="fw-bold mb-0">Pipeline Stages</h4>
+  <button type="button" class="btn btn-primary btn-sm" data-tour="new-stage-button" (click)="showForm.set(!showForm())">
     {{ showForm() ? 'Close' : '+ New Stage' }}
   </button>
 </div>
@@ -31,11 +42,15 @@
               <input type="checkbox" class="form-check-input" id="isLost" name="isLost" [(ngModel)]="isLost" />
               <label class="form-check-label" for="isLost">Counts as Lost</label>
             </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="isDefault" name="isDefault" [(ngModel)]="isDefault" />
+              <label class="form-check-label" for="isDefault">Default for sales entries</label>
+            </div>
           </div>
           @if (errorMessage()) {
             <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
           }
-          <button type="submit" class="btn btn-primary">Add stage</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingStage()">{{ savingStage() ? 'Adding...' : 'Add stage' }}</button>
         </form>
       </div>
     </div>
@@ -44,7 +59,7 @@
 }
 
 @if (loading()) {
-  <p class="text-muted">Loading...</p>
+  <app-loader />
 } @else {
   <div class="card card-round mt-3">
     <div class="card-body">
@@ -56,6 +71,7 @@
               <th>Sort order</th>
               <th>Won</th>
               <th>Lost</th>
+              <th>Default</th>
               <th></th>
             </tr>
           </thead>
@@ -67,9 +83,10 @@
                   <td data-label="Sort order"><input type="number" class="form-control form-control-sm" [(ngModel)]="editSortOrder" name="editSortOrder-{{ stage.id }}" /></td>
                   <td data-label="Won"><input type="checkbox" class="form-check-input" [(ngModel)]="editIsWon" name="editIsWon-{{ stage.id }}" /></td>
                   <td data-label="Lost"><input type="checkbox" class="form-check-input" [(ngModel)]="editIsLost" name="editIsLost-{{ stage.id }}" /></td>
+                  <td data-label="Default"><input type="checkbox" class="form-check-input" [(ngModel)]="editIsDefault" name="editIsDefault-{{ stage.id }}" /></td>
                   <td>
-                    <button type="button" class="btn btn-primary btn-sm" (click)="saveEdit(stage.id)">Save</button>
-                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEdit(stage.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
                   </td>
                 </tr>
               } @else {
@@ -78,12 +95,16 @@
                   <td data-label="Sort order">{{ stage.sortOrder }}</td>
                   <td data-label="Won">{{ stage.isWon ? 'Yes' : '—' }}</td>
                   <td data-label="Lost">{{ stage.isLost ? 'Yes' : '—' }}</td>
-                  <td><button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(stage)">Edit</button></td>
+                  <td data-label="Default">{{ stage.isDefault ? 'Yes' : '—' }}</td>
+                  <td>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(stage)">Edit</button>
+                    <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteStage(stage)">Delete</button>
+                  </td>
                 </tr>
               }
             } @empty {
               <tr>
-                <td colspan="5" class="text-muted">No pipeline stages yet.</td>
+                <td colspan="6" class="text-muted">No pipeline stages yet.</td>
               </tr>
             }
           </tbody>
@@ -91,4 +112,115 @@
       </div>
     </div>
   </div>
+}
+
+}
+
+@if (activeTab() === 'product') {
+
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pb-3">
+  <h4 class="fw-bold mb-0">Product Stages</h4>
+  <button type="button" class="btn btn-primary btn-sm" (click)="showProductForm.set(!showProductForm())">
+    {{ showProductForm() ? 'Close' : '+ New Stage' }}
+  </button>
+</div>
+
+@if (showProductForm()) {
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">New product stage</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="createProductStage()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="productName">Name</label>
+            <input id="productName" name="productName" type="text" class="form-control" [(ngModel)]="productName" required placeholder="e.g. Active" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="productSortOrder">Sort order</label>
+            <input id="productSortOrder" name="productSortOrder" type="number" class="form-control" [(ngModel)]="productSortOrder" required />
+          </div>
+          <div class="form-group mb-3 d-flex gap-4">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="productIsWon" name="productIsWon" [(ngModel)]="productIsWon" />
+              <label class="form-check-label" for="productIsWon">Counts as Won</label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="productIsLost" name="productIsLost" [(ngModel)]="productIsLost" />
+              <label class="form-check-label" for="productIsLost">Counts as Lost</label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="productIsDefault" name="productIsDefault" [(ngModel)]="productIsDefault" />
+              <label class="form-check-label" for="productIsDefault">Default for sales entries</label>
+            </div>
+          </div>
+          @if (productErrorMessage()) {
+            <div class="alert alert-danger py-2">{{ productErrorMessage() }}</div>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="savingProductStage()">{{ savingProductStage() ? 'Adding...' : 'Add stage' }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@if (productLoading()) {
+  <app-loader />
+} @else {
+  <div class="card card-round mt-3">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-card-mobile">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Sort order</th>
+              <th>Won</th>
+              <th>Lost</th>
+              <th>Default</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (stage of productStages(); track stage.id) {
+              @if (editingProductId() === stage.id) {
+                <tr>
+                  <td data-label="Name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editProductName" name="editProductName-{{ stage.id }}" /></td>
+                  <td data-label="Sort order"><input type="number" class="form-control form-control-sm" [(ngModel)]="editProductSortOrder" name="editProductSortOrder-{{ stage.id }}" /></td>
+                  <td data-label="Won"><input type="checkbox" class="form-check-input" [(ngModel)]="editProductIsWon" name="editProductIsWon-{{ stage.id }}" /></td>
+                  <td data-label="Lost"><input type="checkbox" class="form-check-input" [(ngModel)]="editProductIsLost" name="editProductIsLost-{{ stage.id }}" /></td>
+                  <td data-label="Default"><input type="checkbox" class="form-check-input" [(ngModel)]="editProductIsDefault" name="editProductIsDefault-{{ stage.id }}" /></td>
+                  <td>
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingProductEdit()" (click)="saveEditProduct(stage.id)">{{ savingProductEdit() ? 'Saving...' : 'Save' }}</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingProductEdit()" (click)="cancelEditProduct()">Cancel</button>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td data-label="Name">{{ stage.name }}</td>
+                  <td data-label="Sort order">{{ stage.sortOrder }}</td>
+                  <td data-label="Won">{{ stage.isWon ? 'Yes' : '—' }}</td>
+                  <td data-label="Lost">{{ stage.isLost ? 'Yes' : '—' }}</td>
+                  <td data-label="Default">{{ stage.isDefault ? 'Yes' : '—' }}</td>
+                  <td>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEditProduct(stage)">Edit</button>
+                    <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteProductStage(stage)">Delete</button>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="6" class="text-muted">No product stages yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}
+
 }

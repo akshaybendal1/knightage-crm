@@ -16,3 +16,9 @@ src/Knightage.Crm.Api/wwwroot/
 ## OS
 .DS_Store
 Thumbs.db
+
+## Build/deploy artifacts -- never meant for source control
+publish_output/
+.deploy-work/
+*.bak
+**/PublishProfiles/*.pubxml.user

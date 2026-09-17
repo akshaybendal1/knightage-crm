@@ -1,0 +1,131 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
+  <h3 class="fw-bold mb-0">Organization</h3>
+</div>
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card card-round">
+        <div class="card-header">
+          <div class="card-title">Details</div>
+        </div>
+        <div class="card-body">
+          <form (ngSubmit)="save()">
+            <div class="form-group mb-3">
+              <label class="form-label" for="name">Organization name</label>
+              <input id="name" name="name" type="text" class="form-control" [(ngModel)]="name" required />
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="contactEmail">Contact email</label>
+              <input id="contactEmail" name="contactEmail" type="email" class="form-control" [(ngModel)]="contactEmail" />
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="contactPhone">Contact phone</label>
+              <input id="contactPhone" name="contactPhone" type="tel" class="form-control" [(ngModel)]="contactPhone" />
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="address">Address</label>
+              <textarea id="address" name="address" class="form-control" rows="3" [(ngModel)]="address"></textarea>
+            </div>
+            @if (errorMessage()) {
+              <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+            }
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save' }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card card-round mb-3">
+        <div class="card-header">
+          <div class="card-title">Branding</div>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small">Shown on the sidebar, browser tab icon, and on invoices/quotations.</p>
+          <div class="d-flex align-items-center gap-3 mb-3">
+            @if (branding.logoUrl(); as logoUrl) {
+              <img [src]="logoUrl" alt="Current logo" style="max-height: 48px; max-width: 200px; object-fit: contain;" />
+            } @else {
+              <span class="text-muted">No logo uploaded.</span>
+            }
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="logoFile">Upload a new logo (PNG or JPEG, up to 2 MB)</label>
+            <input id="logoFile" type="file" class="form-control" accept="image/png,image/jpeg" (change)="onLogoFileSelected($event)" />
+          </div>
+          @if (brandingError()) {
+            <div class="alert alert-danger py-2">{{ brandingError() }}</div>
+          }
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary" [disabled]="!selectedLogoFile || uploadingLogo()" (click)="uploadLogo()">
+              {{ uploadingLogo() ? 'Uploading...' : 'Upload' }}
+            </button>
+            @if (branding.logoUrl()) {
+              <button type="button" class="btn btn-label-danger" [disabled]="removingLogo()" (click)="removeLogo()">
+                {{ removingLogo() ? 'Removing...' : 'Remove logo' }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card card-round">
+        <div class="card-header">
+          <div class="card-title">Subscription</div>
+        </div>
+        <div class="card-body">
+          <p>
+            Status: <span class="badge" [class]="statusBadgeClass()">{{ statusLabel() }}</span>
+          </p>
+
+          @if (subscriptionStartDate() || subscriptionEndDate()) {
+            <p class="text-muted mb-2">
+              @if (subscriptionStartDate()) {
+                Start date: {{ subscriptionStartDate() | date: 'mediumDate' }}<br />
+              }
+              @if (subscriptionEndDate()) {
+                End date: {{ subscriptionEndDate() | date: 'mediumDate' }}
+              }
+            </p>
+          }
+
+          @if (subscriptionStatus() === 'NotSubscribed') {
+            <p class="text-muted">Your organization hasn't set up a subscription yet.</p>
+          } @else if (subscriptionStatus() === 'ReadOnly') {
+            <p class="text-muted">Your subscription is in its grace period. Changes are disabled until it's renewed.</p>
+          } @else if (subscriptionStatus() === 'Disabled') {
+            <p class="text-muted">Your subscription has expired.</p>
+          }
+
+          @if (subscriptionStatus() !== 'Active') {
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              [disabled]="requestingSubscription() || requestSent()"
+              (click)="requestSubscription()"
+            >
+              {{ requestSent() ? 'Request sent' : requestingSubscription() ? 'Sending...' : 'Request Subscription' }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="card card-round mt-3">
+        <div class="card-header">
+          <div class="card-title">Knightage Platform</div>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">Manage your other Knightage services, billing, and account from one place.</p>
+          <a [href]="platformUrl()" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+            Open Knightage Platform <i class="fas fa-external-link-alt ms-1"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+}

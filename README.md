@@ -45,7 +45,7 @@ This service does not issue tokens — it only validates JWTs issued by `knighta
 
 ## Multi-tenancy
 
-Every authenticated request is routed to its own tenant's database, resolved from the JWT's `org_id` claim -- there is no longer one shared database serving every organization. `TenantResolutionMiddleware` (between `UseAuthorization()` and `MapControllers()`) looks up the caller's `Knightage.Crm`-specific database name from `knightage-platform`'s tenant directory (`GET /api/tenants/{organizationId}`, forwarding the caller's own token), caches it for 5 minutes, and stores it on a scoped `CurrentTenantContext`. `DapperContext` reads that per-request instead of a single startup-time connection string, swapping only the `InitialCatalog` -- `ConnectionStrings:Default` still supplies the server/credentials, but its `Database=` segment is no longer read (always overridden per tenant). If the caller's organization hasn't been provisioned for this service yet (e.g. `knightage-platform` is down, or a race right after registration), the request fails fast with `503` rather than reaching a repository. `Tenancy:ServiceName` (`"Crm"`) identifies this service when querying the tenant directory -- it must match the value `knightage-platform`'s `ProvisioningService` provisions under.
+All organizations share one database (`ConnectionStrings:Default`'s `Database=` value, currently `Knightage_Crm`) -- every table carries an `OrganizationId` column, and every repository query filters/stamps it. This replaced an earlier per-tenant-database scheme: provisioning a brand-new database per tenant required `CREATE DATABASE` rights (`dbcreator`) that a least-privilege SQL login shouldn't have, and does need on shared hosting. `TenantResolutionMiddleware` (between `UseAuthorization()` and `MapControllers()`) reads the caller's `org_id` JWT claim and stores it on a scoped `TenantContext`; repositories call `TenantContext.RequireOrganizationId()` internally the same way they call `DapperContext.CreateConnection()` -- controllers never need to mention it. `DapperContext` is a single startup-time connection string (`AddSingleton`), same pattern as `knightage-identity`. `knightage-platform` is no longer consulted at request time at all -- it still records a `Crm` bookkeeping row per tenant (always pointing at this same shared database name) so its own ops UI keeps working, but nothing in this service calls it.
 
 ## Client runtime config
 
@@ -67,10 +67,9 @@ dotnet build
 ```
 
 Update `src/Knightage.Crm.Api/appsettings.json`:
-- `ConnectionStrings:Default` — point at your local SQL Server (server + credentials only; the actual database is resolved per tenant at request time, see "Multi-tenancy" above).
+- `ConnectionStrings:Default` — point at your local SQL Server; `Database=Knightage_Crm` is the real shared database name (see "Multi-tenancy" above), create it and run everything under `sql/` (through `010_organization_id.sql`) against it.
 - `Jwt:Key`/`Issuer`/`Audience` — must match the values configured in `knightage-identity`.
 - `Client:IdentityBaseUrl` — where `knightage-identity` is running (defaults to `http://localhost:5101`).
-- `Services:PlatformBaseUrl` — where `knightage-platform` is running (defaults to `http://localhost:5102`). Needed to resolve each request's tenant database.
 
 ```
 dotnet run --project src/Knightage.Crm.Api

@@ -1,0 +1,32 @@
+.app-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.app-loader-sm {
+  padding: 8px 0;
+}
+
+.app-loader-spinner {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-soft, rgba(230, 98, 57, 0.2));
+  border-top-color: var(--accent, #e66239);
+  animation: app-loader-spin 0.8s linear infinite;
+}
+
+.app-loader-sm .app-loader-spinner {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+@keyframes app-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

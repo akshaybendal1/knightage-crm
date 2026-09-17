@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Knightage CRM</string>
+    <string name="title_activity_main">Knightage CRM</string>
+    <string name="package_name">com.knightage.crm</string>
+    <string name="custom_url_scheme">com.knightage.crm</string>
+</resources>

@@ -1,0 +1,96 @@
+import { Component, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Auth } from '../../core/auth';
+import { IdentityApi } from '../../core/identity-api';
+import { Toast } from '../../core/toast';
+import { Loader } from '../../loader/loader';
+
+@Component({
+  selector: 'app-profile',
+  imports: [FormsModule, Loader],
+  templateUrl: './profile.html',
+})
+export class Profile implements OnInit {
+  loading = signal(true);
+  saving = signal(false);
+  errorMessage = signal<string | null>(null);
+  email = '';
+  role = '';
+
+  displayName = '';
+  phoneNumber = '';
+
+  changingPassword = signal(false);
+  currentPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  passwordError = signal<string | null>(null);
+
+  constructor(
+    private readonly identityApi: IdentityApi,
+    protected readonly auth: Auth,
+    private readonly toast: Toast,
+  ) {}
+
+  ngOnInit(): void {
+    this.identityApi.getMe().subscribe({
+      next: (user) => {
+        this.displayName = user.displayName;
+        this.phoneNumber = user.phoneNumber ?? '';
+        this.email = user.email;
+        this.role = user.role;
+        this.loading.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('Could not load your profile.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  saveProfile(): void {
+    if (!this.displayName.trim()) {
+      this.errorMessage.set('Name is required.');
+      return;
+    }
+    this.saving.set(true);
+    this.errorMessage.set(null);
+    this.identityApi.updateProfile(this.displayName.trim(), this.phoneNumber.trim() || null).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.auth.updateCachedDisplayName(this.displayName.trim());
+        this.toast.success('Profile updated.');
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.errorMessage.set(err?.error?.message ?? 'Could not update your profile.');
+      },
+    });
+  }
+
+  changePassword(): void {
+    this.passwordError.set(null);
+    if (this.newPassword.length < 8) {
+      this.passwordError.set('New password must be at least 8 characters.');
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.passwordError.set('New password and confirmation do not match.');
+      return;
+    }
+    this.changingPassword.set(true);
+    this.identityApi.changePassword(this.currentPassword, this.newPassword).subscribe({
+      next: () => {
+        this.changingPassword.set(false);
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.confirmPassword = '';
+        this.toast.success('Password changed.');
+      },
+      error: (err) => {
+        this.changingPassword.set(false);
+        this.passwordError.set(err?.error?.message ?? 'Could not change your password.');
+      },
+    });
+  }
+}

@@ -1,0 +1,50 @@
+.whatsapp-queue-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1060;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.whatsapp-queue-drawer {
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  background: var(--bg-surface, #fff);
+  padding: 16px;
+  overflow-y: auto;
+  box-shadow: -0.5rem 0 1rem rgba(0, 0, 0, 0.15);
+}
+
+.whatsapp-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.whatsapp-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.whatsapp-queue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border-subtle, #e5e5e5);
+  border-radius: var(--radius, 6px);
+}
+
+.whatsapp-queue-row.opened {
+  opacity: 0.7;
+}
+
+.whatsapp-queue-row-info {
+  min-width: 0;
+  flex: 1;
+}

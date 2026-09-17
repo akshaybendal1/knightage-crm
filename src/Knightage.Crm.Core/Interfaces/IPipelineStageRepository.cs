@@ -8,4 +8,5 @@ public interface IPipelineStageRepository
     Task<PipelineStage?> GetByIdAsync(Guid id);
     Task<PipelineStage> CreateAsync(PipelineStage stage);
     Task UpdateAsync(PipelineStage stage);
+    Task SetActiveAsync(Guid id, bool isActive);
 }

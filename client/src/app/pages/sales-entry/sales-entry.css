@@ -1,0 +1,6 @@
+/* Bootstrap's .form-control-plaintext hardcodes a near-black text color meant
+   for light backgrounds -- override it so the read-only Owner value stays
+   legible against this app's dark theme. */
+.owner-value {
+  color: var(--text-primary);
+}

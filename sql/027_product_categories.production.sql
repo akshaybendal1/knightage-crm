@@ -1,0 +1,7 @@
+CREATE TABLE appuser.ProductCategories (
+    Id UNIQUEIDENTIFIER PRIMARY KEY,
+    OrganizationId UNIQUEIDENTIFIER NOT NULL,
+    Name NVARCHAR(100) NOT NULL,
+    SortOrder INT NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1
+);

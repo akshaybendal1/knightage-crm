@@ -1,0 +1,154 @@
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+  <div>
+    <h3 class="fw-bold mb-0">Timeline</h3>
+  </div>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+<div class="range-toggle mb-3">
+  <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'leads'" [class.btn-label-light]="view() !== 'leads'" (click)="setView('leads')">Leads</button>
+  <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'products'" [class.btn-label-light]="view() !== 'products'" (click)="setView('products')">Lead Products</button>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-4">
+    <div class="form-group">
+      <label class="form-label" for="timelineFilterOwner">Filter by owner</label>
+      <select id="timelineFilterOwner" name="timelineFilterOwner" class="form-select" [(ngModel)]="filterOwnerId" (ngModelChange)="onFilterChange()">
+        <option value="">All owners</option>
+        <option [value]="auth.currentUser()?.userId">Me</option>
+        @for (u of orgUsers(); track u.id) {
+          @if (u.id !== auth.currentUser()?.userId) {
+            <option [value]="u.id">{{ u.displayName }}</option>
+          }
+        }
+      </select>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="form-group">
+      <label class="form-label" for="timelineFilterProduct">Filter by product</label>
+      <select id="timelineFilterProduct" name="timelineFilterProduct" class="form-select" [(ngModel)]="filterProductId" (ngModelChange)="onFilterChange()">
+        <option value="">All products</option>
+        @for (p of products(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="form-group">
+      <label class="form-label" for="timelineFilterSearch">Filter by lead</label>
+      <input
+        id="timelineFilterSearch"
+        name="timelineFilterSearch"
+        type="search"
+        class="form-control"
+        placeholder="Search by lead name..."
+        [(ngModel)]="filterSearch"
+        (ngModelChange)="onSearchChange()"
+      />
+    </div>
+  </div>
+</div>
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  @if (view() === 'leads') {
+    <div class="timeline-board" cdkDropListGroup>
+      @for (column of leadColumns(); track column.stage.id) {
+        <div class="timeline-column">
+          <div class="timeline-column-header">
+            <span class="timeline-column-title">{{ column.stage.name }}</span>
+            <span class="badge badge-secondary">{{ column.totalCount }}</span>
+          </div>
+          <div
+            class="timeline-column-body"
+            cdkDropList
+            [cdkDropListData]="column.items"
+            (cdkDropListDropped)="onLeadDrop($event, column)"
+          >
+            @for (item of column.items; track item.leadId) {
+              <div class="timeline-card" cdkDrag>
+                <a class="timeline-card-link" [routerLink]="['/leads', item.leadId]">
+                  <div class="timeline-card-name">{{ item.leadName }}</div>
+                  @if (item.company) {
+                    <div class="timeline-card-sub">{{ item.company }}</div>
+                  }
+                  <div class="timeline-card-meta">
+                    <span>{{ ownerLabel(item.ownerUserId) }}</span>
+                    @if (item.totalCost > 0) {
+                      <span>{{ item.totalCost | currency: 'INR' : 'symbol' : '1.0-0' }}</span>
+                    }
+                  </div>
+                  <span class="badge" [class.badge-warning]="isStuck(item.daysInStage, column.stage)" [class.badge-secondary]="!isStuck(item.daysInStage, column.stage)">
+                    {{ item.daysInStage }} day{{ item.daysInStage === 1 ? '' : 's' }}
+                  </span>
+                </a>
+              </div>
+            } @empty {
+              <div class="text-muted small">No leads in this stage.</div>
+            }
+          </div>
+          @if (column.items.length < column.totalCount) {
+            <button type="button" class="btn btn-label-secondary btn-sm w-100" [disabled]="column.loading" (click)="loadLeadColumnPage($index)">
+              {{ column.loading ? 'Loading...' : 'View more' }}
+            </button>
+          }
+        </div>
+      } @empty {
+        <div class="text-muted">No pipeline stages yet.</div>
+      }
+    </div>
+  } @else {
+    <div class="timeline-board" cdkDropListGroup>
+      @for (column of productColumns(); track column.stage.id) {
+        <div class="timeline-column">
+          <div class="timeline-column-header">
+            <span class="timeline-column-title">{{ column.stage.name }}</span>
+            <span class="badge badge-secondary">{{ column.totalCount }}</span>
+          </div>
+          <div
+            class="timeline-column-body"
+            cdkDropList
+            [cdkDropListData]="column.items"
+            (cdkDropListDropped)="onProductDrop($event, column)"
+          >
+            @for (item of column.items; track item.leadProductId) {
+              <div class="timeline-card" cdkDrag>
+                <a class="timeline-card-link" [routerLink]="['/leads', item.leadId]">
+                  <div class="timeline-card-name">{{ item.leadName }}</div>
+                  @if (item.company) {
+                    <div class="timeline-card-sub">{{ item.company }}</div>
+                  }
+                  <div class="timeline-card-meta">
+                    <span>{{ item.productName || 'No product' }}</span>
+                    @if (item.lineTotal > 0) {
+                      <span>{{ item.quantity }} &times; {{ item.unitPrice | currency: 'INR' : 'symbol' : '1.0-0' }}</span>
+                    }
+                  </div>
+                  <span class="badge" [class.badge-warning]="isStuck(item.daysInStatus, column.stage)" [class.badge-secondary]="!isStuck(item.daysInStatus, column.stage)">
+                    {{ item.daysInStatus }} day{{ item.daysInStatus === 1 ? '' : 's' }}
+                  </span>
+                </a>
+              </div>
+            } @empty {
+              <div class="text-muted small">No products in this stage.</div>
+            }
+          </div>
+          @if (column.items.length < column.totalCount) {
+            <button type="button" class="btn btn-label-secondary btn-sm w-100" [disabled]="column.loading" (click)="loadProductColumnPage($index)">
+              {{ column.loading ? 'Loading...' : 'View more' }}
+            </button>
+          }
+        </div>
+      } @empty {
+        <div class="text-muted">No product stages yet.</div>
+      }
+    </div>
+  }
+}

@@ -1,45 +1,337 @@
-/* Bootstrap + kaiadmin (loaded globally via angular.json) provide the base
-   element/card/table/button/badge/form styling now -- this file only holds
-   what's genuinely specific to this app. */
+/* ============================================================
+   Design system -- knightage-crm
+   Ground-up redesign referencing ThemeWagon's "InApp" template
+   (bootstrap.min.css + Font Awesome stay as base frameworks; this
+   file is the entire visual/component layer -- no vendor admin
+   theme underneath it anymore). Every class below is first-party:
+   the app owns what it means, nothing here is overriding another
+   stylesheet's opinion.
 
-/* Bootstrap's .row only adds a horizontal gutter by default (--bs-gutter-y is
-   0) -- side-by-side columns (e.g. the three dashboard stat cards) look fine
-   on desktop, but once they stack to one-per-line on mobile they butt
-   directly against each other with no gap. This sets the vertical gutter
-   variable Bootstrap already reads, so stacked columns everywhere get a
-   consistent gap; it doesn't affect the horizontal gutter or desktop layout,
-   since on desktop those columns never wrap onto separate rows. */
+   Reference measurements (from the live template): cards/inputs/
+   buttons/badges all share one 6px radius; separation between
+   surfaces comes from a 1px border, never a shadow; accent #e66239
+   is the one primary color, used liberally (buttons, active nav,
+   one badge variant, stat tints) rather than confined to one spot.
+   ============================================================ */
+
+:root {
+  --bg-page: #f3f4f8;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #ececf2;
+  --border-subtle: #e5e5e5;
+  --text-primary: #171717;
+  --text-muted: #737373;
+
+  --accent: #e66239;
+  --accent-soft: rgba(230, 98, 57, 0.1);
+  --success: #00c951;
+  --success-soft: rgba(0, 201, 81, 0.1);
+  --danger: #fb2c36;
+  --danger-soft: rgba(251, 44, 54, 0.1);
+  --warning: #f0b100;
+  --warning-soft: rgba(240, 177, 0, 0.1);
+
+  /* Stage-change activity badge (lead-detail timeline) -- not a color the
+     reference template has an equivalent for, so it's app-specific. */
+  --badge-purple-bg: #ede9fe;
+  --badge-purple-text: #5b21b6;
+
+  --radius: 6px;
+}
+
+/* Dark has no reference to copy (the template has no dark mode) -- this is
+   designed, not extracted. Two deliberate departures from a literal invert:
+   1) page and surface get a real color-elevation step, not just a border --
+      a hairline border alone reads poorly against a dark background.
+   2) accent/success/danger/warning stay identical to light mode -- brand and
+      semantic colors, not something theme should change. Only the neutral
+      scale (backgrounds, borders, text) inverts. */
+:root[data-theme='dark'] {
+  --bg-page: #0b1220;
+  --bg-surface: #1a2540;
+  --bg-surface-2: #232f4d;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --text-primary: #e5e9f0;
+  --text-muted: #8b93a7;
+
+  --badge-purple-bg: rgba(139, 92, 246, 0.18);
+  --badge-purple-text: #c4b5fd;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+html,
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+a {
+  color: var(--accent);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-primary);
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Bootstrap's .row only adds a horizontal gutter by default -- side-by-side
+   columns look fine on desktop, but once they stack to one-per-line on
+   mobile they butt directly against each other with no gap. */
 .row {
   --bs-gutter-y: 1rem;
 }
 
-/* kaiadmin's default .card-header/.card-body padding (1rem/1.25rem+1.25rem)
-   is sized for desktop -- on a ~375px phone, with several cards stacked
-   per page, that padding alone eats a large share of the usable width and
-   adds up to a lot of dead vertical space. Trim it below the tablet
-   breakpoint; desktop keeps kaiadmin's own spacing untouched. kaiadmin's
-   own rule is the compound selector `.card .card-header`/`.card .card-body`
-   (specificity 0,2,0) -- a bare `.card-header`/`.card-body` override loses
-   to it regardless of source order, so this has to match that shape. */
+/* ============================================================
+   Cards
+   ============================================================ */
+
+.card,
+.card-round {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  box-shadow: none;
+  color: var(--text-primary);
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 14px 20px;
+  color: var(--text-primary);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.card-body {
+  padding: 20px;
+  color: var(--text-primary);
+}
+
 @media (max-width: 767.98px) {
-  .card .card-header,
-  .card-light .card-header {
-    padding: 0.75rem 1rem;
+  .card-header {
+    padding: 12px 16px;
   }
 
-  .card .card-body,
-  .card-light .card-body {
-    padding: 0.85rem 1rem;
+  .card-body {
+    padding: 14px 16px;
   }
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn {
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: filter 0.15s ease;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(0.93);
+}
+
+.btn-label-secondary,
+.btn-label-light {
+  background: var(--bg-surface-2);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.btn-label-secondary:hover:not(:disabled),
+.btn-label-light:hover:not(:disabled) {
+  background: var(--border-subtle);
+}
+
+.btn-label-info {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.btn-label-info:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.btn-label-danger {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.btn-label-danger:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+  display: inline-block;
+}
+
+.form-control,
+.form-select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.form-control-sm,
+.form-select-sm {
+  padding: 5px 10px;
+  font-size: 0.8125rem;
+}
+
+.form-control::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* Bootstrap's own `.form-control:disabled` rule outranks the plain `.form-control`
+   background override above (one more pseudo-class in its specificity), so a disabled
+   field falls back to Bootstrap's light-theme gray background while still inheriting
+   our light dark-theme text color -- nearly invisible. Override both together. */
+.form-control:disabled,
+.form-select:disabled {
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background: var(--bg-surface);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.form-check-input {
+  accent-color: var(--accent);
+}
+
+/* Show/hide toggle button overlaid on a password input -- the input needs
+   right padding cleared for the button so typed text never runs under it. */
+.password-field {
+  position: relative;
+}
+
+.password-field .form-control {
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+
+.table {
+  --bs-table-bg: var(--bg-surface);
+  --bs-table-color: var(--text-primary);
+  --bs-table-striped-bg: var(--bg-surface-2);
+  --bs-table-striped-color: var(--text-primary);
+  color: var(--text-primary);
+  margin-bottom: 0;
+}
+
+.table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-color: var(--border-subtle);
+  padding: 10px 12px;
+}
+
+.table td {
+  border-color: var(--border-subtle);
+  padding: 12px;
+  vertical-align: middle;
+}
+
+.table-hover > tbody > tr:hover > * {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
 }
 
 /* Bootstrap tables have no built-in small-screen layout -- .table-responsive
    only adds horizontal scrolling, which on a phone means every column past
    the first one or two is cut off and has to be scrolled to sideways. Tables
-   opted into this class (leads, pipeline stages, team) instead render each
-   row as a stacked card below 768px, with each cell's data-label attribute
-   shown as a small heading above its value. Cells with no data-label (the
-   actions column) just render their buttons in a plain block. */
+   opted into this class render each row as a stacked card below 768px, with
+   each cell's data-label attribute shown as a small heading above its value. */
 @media (max-width: 767.98px) {
   .table-card-mobile thead {
     display: none;
@@ -51,25 +343,19 @@
     width: 100%;
   }
 
-  /* No background of its own, this card was white sitting inside the
-     table's already-white .card-body, with only a 1px border between them
-     -- barely visible. kaiadmin's own page background (#f5f7fd, set on
-     body) gives each row a tint that actually reads as a distinct card
-     against its white container, so it borrows that instead of inventing
-     a new color. */
   .table-card-mobile tr {
     display: block;
-    background: #f5f7fd;
-    border: 1px solid #e9ecef;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    margin-bottom: 0.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 10px;
   }
 
   .table-card-mobile td {
     display: block;
     border: none;
-    padding: 0.2rem 0;
+    padding: 0.3rem 0;
   }
 
   .table-card-mobile td[data-label] {
@@ -78,6 +364,8 @@
     align-items: flex-start;
     gap: 0.1rem;
     text-align: left;
+    overflow-wrap: anywhere;
+    max-width: 100%;
   }
 
   .table-card-mobile td[data-label]::before {
@@ -86,7 +374,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #6b7280;
+    color: var(--text-muted);
   }
 
   .table-card-mobile td[data-label] .form-control,
@@ -94,32 +382,14 @@
     width: 100%;
   }
 
-  /* kaiadmin's base .badge rule sets margin-left:auto (it expects badges to
-     sit in a flex row and float right); inside our flex-column card layout
-     that pushes badges to the right instead of lining up under their label. */
   .table-card-mobile td[data-label] .badge {
     margin-left: 0;
   }
 }
 
-/* The off-canvas sidebar sits at left:-270px below 1200.5px (see app.css) so
-   it can slide in; kaiadmin's own CSS only clips that with overflow-x:hidden
-   while the sidebar is open (body.nav_open), not by default. That gap is a
-   known source of a stray horizontal scrollbar on mobile browsers even
-   though the sidebar is position:fixed. Belt-and-suspenders fix: never allow
-   horizontal document scroll -- nothing in this app relies on it, table
-   overflow is handled separately by Bootstrap's .table-responsive. */
-html,
-body {
-  overflow-x: hidden;
-  max-width: 100%;
-}
-
-/* The actions cell (View/Edit, Save/Cancel) is the last column and has no
-   explicit width, so once two buttons plus their margin exceed it, they can
-   wrap onto separate lines instead of staying aligned on one row. Tables are
-   wrapped in Bootstrap's .table-responsive, so keep this cell on one line
-   and let that scroll handle overflow instead of wrapping unpredictably. */
+/* The actions cell is the last column and has no explicit width, so once two
+   buttons plus their margin exceed it, they wrap onto separate lines instead
+   of staying aligned on one row. */
 tr td:last-child {
   white-space: nowrap;
 }
@@ -127,4 +397,677 @@ tr td:last-child {
 td a + button,
 td button + button {
   margin-left: 0.4rem;
+}
+
+/* ============================================================
+   Badges -- subtle tint + solid text + matching border, per the
+   reference's measured token table. Not pill-shaped (radius matches
+   everything else); the one exception is the topbar notification
+   count, styled separately in app.css since it's shell-only.
+   ============================================================ */
+
+.badge {
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.badge-primary {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.badge-success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.badge-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.badge-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.badge-secondary {
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+/* ============================================================
+   Alerts
+   ============================================================ */
+
+.alert-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+
+/* ============================================================
+   Dropdown menu (the topbar user menu is the only consumer)
+   A floating/overlaid element gets a soft shadow in addition to the
+   border -- unlike cards sitting in the page flow, it needs to read
+   as separated from whatever content is behind it.
+   ============================================================ */
+
+.dropdown-menu {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+}
+
+.dropdown-item {
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
+.dropdown-divider {
+  border-color: var(--border-subtle);
+  margin: 6px 0;
+}
+
+/* ============================================================
+   Shared bars/range-toggle/stat-tile pattern -- originally
+   dashboard.css only; moved here once reports.html needed the same
+   categorical-bar and stat-tile look for its own sections instead of
+   duplicating the rules a second time.
+   ============================================================ */
+
+.pipeline-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pipeline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pipeline-name {
+  flex: 0 0 120px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-bar-track {
+  flex: 1 1 auto;
+  min-width: 60px;
+  height: 0.85rem;
+  background: var(--bg-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pipeline-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.pipeline-count {
+  flex: 0 0 2.5rem;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* Dashboard's own "Pipeline overview" -- one small stat-style card per stage,
+   distinct from .pipeline-bars/.pipeline-row above (still used as-is by
+   Reports' "leads by source" breakdown) rather than repurposing those. */
+.pipeline-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.pipeline-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  background: var(--bg-surface-2);
+  text-decoration: none;
+  color: inherit;
+}
+
+.pipeline-card-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Timeline Kanban board -- horizontal scroll is contained to the board itself
+   (standard Trello-style pattern), not the page, so this doesn't fight the
+   app's general no-horizontal-scroll layout rule. */
+.timeline-board {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.timeline-column {
+  flex: 0 0 260px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+
+.timeline-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-weight: 600;
+}
+
+.timeline-column-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  min-height: 3rem;
+}
+
+.timeline-card {
+  display: block;
+  background: var(--bg-surface-2);
+  border-radius: calc(var(--radius) - 2px);
+  cursor: grab;
+}
+
+.timeline-card-link {
+  display: block;
+  padding: 0.5rem 0.65rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.timeline-card-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-card-sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary, inherit);
+  margin-bottom: 0.25rem;
+}
+
+.timeline-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+/* Standard minimal CDK drag-drop styling recipe -- a shadow on the dragged card, a
+   dimmed placeholder in the gap it left behind, and a smooth slide for the siblings
+   that move out of the way. */
+.timeline-card.cdk-drag-preview {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-card.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+.timeline-column-body.cdk-drop-list-dragging .timeline-card:not(.cdk-drag-placeholder) {
+  transition: transform 200ms ease;
+}
+
+.range-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stat-pair {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.stat-tile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  font-size: 1.05rem;
+}
+
+.stat-icon.won {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.stat-icon.lost,
+.stat-icon.overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.stat-icon.activity {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.stat-icon.stuck {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.stat-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-tile.won .stat-value {
+  color: var(--success);
+}
+
+.stat-tile.lost .stat-value {
+  color: var(--danger);
+}
+
+.stat-tile.overdue .stat-value {
+  color: var(--danger);
+}
+
+.stat-tile.stuck .stat-value {
+  color: var(--warning);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   WhatsApp link styles -- WhatsApp's own brand green, not the app
+   accent, same reasoning as the Google button elsewhere: a third-party
+   brand reads better in its own recognizable color. Originally
+   contact-us.css only; moved here once Leads/Lead detail/Team also
+   needed it, same reason the bars/stat-tile block above was moved.
+   ============================================================ */
+
+.whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #25d366;
+  border-color: #25d366;
+  color: #fff;
+}
+
+.whatsapp-btn:hover {
+  filter: brightness(0.95);
+  color: #fff;
+}
+
+.whatsapp-btn i {
+  font-size: 1.1rem;
+}
+
+/* Compact icon-only variant for table rows and detail lines, where a
+   full labeled button doesn't fit. */
+.whatsapp-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  font-size: 0.9rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.whatsapp-icon-link:hover {
+  filter: brightness(0.95);
+  color: #fff;
+}
+
+/* ============================================================
+   Shared task-item pattern -- previously defined independently (and
+   already slightly drifted) in both tasks.css and lead-detail.css;
+   consolidated here since both pages render the same thing.
+   ============================================================ */
+
+.task-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.task-item.overdue {
+  border-left: 3px solid var(--danger);
+}
+
+.task-item.completed .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Flex items default to min-width:auto, meaning they refuse to shrink below
+   their content's unbroken width -- without this, a long title with no
+   spaces overflows the item instead of wrapping. */
+.task-item > div {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.task-item .task-title,
+.task-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.task-item input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.task-due.overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Calendar (task calendar page) -- desktop grid / mobile agenda-list
+   split, mirroring the .table-card-mobile pattern above: same data,
+   CSS-driven visibility swap, no second request.
+   ============================================================ */
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--border-subtle);
+  gap: 1px;
+}
+
+.calendar-agenda {
+  display: none;
+}
+
+/* ============================================================
+   Tour (driver.js popover overrides) -- reskinned to match the
+   .dropdown-menu floating-panel look instead of driver.js's default
+   theme. Uses --accent/--bg-surface tokens so a tenant's accent color
+   (Theme.applyAccentColor) carries through automatically.
+   ============================================================ */
+
+.driver-popover {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+  max-width: min(340px, calc(100vw - 32px));
+}
+
+.driver-popover-title {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.driver-popover-description {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.driver-popover-progress-text {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.driver-popover-footer button {
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-height: 36px;
+  text-shadow: none;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.driver-popover-next-btn {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.driver-popover-close-btn {
+  color: var(--text-muted);
+}
+
+.driver-active-element {
+  border-radius: var(--radius);
+}
+
+.driver-overlay {
+  opacity: 0.5;
+}
+
+.calendar-weekday {
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.calendar-day {
+  background: var(--bg-surface);
+  min-height: 110px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-day.outside-month {
+  background: var(--bg-surface-2);
+}
+
+.calendar-day.outside-month .calendar-day-number {
+  color: var(--text-muted);
+}
+
+.calendar-day.is-today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.calendar-day-number {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.calendar-chip {
+  display: block;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  text-align: left;
+  background: none;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.calendar-chip.chip-overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-left: 3px solid var(--danger);
+}
+
+.calendar-chip.chip-due-today {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.calendar-chip.chip-upcoming {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.calendar-chip.chip-completed {
+  background: var(--success-soft);
+  color: var(--success);
+  text-decoration: line-through;
+}
+
+.calendar-day-more {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendar-agenda-day {
+  margin-bottom: 1.25rem;
+  padding-left: 10px;
+  border-left: 3px solid transparent;
+}
+
+.calendar-agenda-day.is-today {
+  border-left-color: var(--accent);
+}
+
+.calendar-agenda-day.is-today .calendar-agenda-heading {
+  color: var(--accent);
+}
+
+.calendar-agenda .task-item {
+  cursor: pointer;
+}
+
+.calendar-agenda-heading {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+  .calendar-grid {
+    display: none;
+  }
+
+  .calendar-agenda {
+    display: block;
+  }
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+
+.footer {
+  background: var(--bg-page);
+  color: var(--text-muted);
 }

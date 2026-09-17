@@ -1,12 +1,17 @@
 <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
-  <h3 class="fw-bold mb-0">Leads</h3>
-  <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
-    {{ showForm() ? 'Close' : '+ New Lead' }}
-  </button>
+  <h3 class="fw-bold mb-0">Leads <span class="text-muted fw-normal fs-6">({{ totalCount() }})</span></h3>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="exporting()" (click)="exportLeads()">
+      {{ exporting() ? 'Exporting...' : 'Export' }}
+    </button>
+    <button type="button" class="btn btn-primary btn-sm" data-tour="new-lead-button" (click)="showForm.set(!showForm())">
+      {{ showForm() ? 'Close' : '+ New Lead' }}
+    </button>
+  </div>
 </div>
 
 <div class="row mb-3">
-  <div class="col-md-4">
+  <div class="col-md-3">
     <div class="form-group">
       <label class="form-label" for="filterStage">Filter by stage</label>
       <select id="filterStage" name="filterStage" class="form-select" [(ngModel)]="filterStageId" (ngModelChange)="onFilterChange()">
@@ -15,6 +20,45 @@
           <option [value]="s.id">{{ s.name }}</option>
         }
       </select>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="form-group">
+      <label class="form-label" for="filterProduct">Filter by product</label>
+      <select id="filterProduct" name="filterProduct" class="form-select" [(ngModel)]="filterProductId" (ngModelChange)="onFilterChange()">
+        <option value="">All products</option>
+        @for (p of activeProducts(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="form-group">
+      <label class="form-label" for="filterOwner">Filter by owner</label>
+      <select id="filterOwner" name="filterOwner" class="form-select" [(ngModel)]="filterOwnerId" (ngModelChange)="onFilterChange()">
+        <option value="">All owners</option>
+        <option [value]="auth.currentUser()?.userId">Me</option>
+        @for (u of orgUsers(); track u.id) {
+          @if (u.id !== auth.currentUser()?.userId) {
+            <option [value]="u.id">{{ u.displayName }}</option>
+          }
+        }
+      </select>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="form-group">
+      <label class="form-label" for="filterSearch">Search</label>
+      <input
+        id="filterSearch"
+        name="filterSearch"
+        type="search"
+        class="form-control"
+        placeholder="Name, email, phone, company..."
+        [(ngModel)]="filterSearch"
+        (ngModelChange)="onSearchChange()"
+      />
     </div>
   </div>
 </div>
@@ -42,7 +86,7 @@
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="phone">Phone</label>
-            <input id="phone" name="phone" type="text" class="form-control" [(ngModel)]="phone" />
+            <input id="phone" name="phone" type="tel" class="form-control" pattern="[0-9+\-\s()]*" [(ngModel)]="phone" />
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="company">Company</label>
@@ -50,10 +94,49 @@
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="pipelineStageId">Pipeline stage</label>
-            <select id="pipelineStageId" name="pipelineStageId" class="form-select" [(ngModel)]="pipelineStageId" required>
-              <option value="" disabled selected>Choose a stage</option>
+            <select
+              id="pipelineStageId"
+              name="pipelineStageId"
+              class="form-select"
+              [ngModel]="pipelineStageId"
+              (ngModelChange)="onStageSelectChange($event)"
+              required
+            >
+              <option value="" disabled>Choose a stage</option>
               @for (s of stages(); track s.id) {
                 <option [value]="s.id">{{ s.name }}</option>
+              }
+              <option value="__new__">+ Add new stage&hellip;</option>
+            </select>
+            @if (showNewStageInput) {
+              <div class="d-flex gap-2 mt-2">
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  placeholder="New stage name"
+                  [(ngModel)]="newStageName"
+                  name="newStageName"
+                />
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  [disabled]="savingNewStage() || !newStageName.trim()"
+                  (click)="createStageInline()"
+                >
+                  {{ savingNewStage() ? 'Adding...' : 'Add' }}
+                </button>
+                <button type="button" class="btn btn-label-secondary btn-sm" (click)="showNewStageInput = false">Cancel</button>
+              </div>
+            }
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="ownerUserId">Owner</label>
+            <select id="ownerUserId" name="ownerUserId" class="form-select" [(ngModel)]="ownerUserId">
+              <option [value]="auth.currentUser()?.userId">Me</option>
+              @for (u of orgUsers(); track u.id) {
+                @if (u.id !== auth.currentUser()?.userId) {
+                  <option [value]="u.id">{{ u.displayName }}</option>
+                }
               }
             </select>
           </div>
@@ -61,7 +144,7 @@
             <label class="form-label" for="notes">Notes</label>
             <input id="notes" name="notes" type="text" class="form-control" [(ngModel)]="notes" />
           </div>
-          <button type="submit" class="btn btn-primary">Add lead</button>
+          <button type="submit" class="btn btn-primary" [disabled]="savingLead()">{{ savingLead() ? 'Adding...' : 'Add lead' }}</button>
         </form>
       </div>
     </div>
@@ -73,7 +156,10 @@
         <div class="card-title">Bulk import (CSV)</div>
       </div>
       <div class="card-body">
-        <p class="text-muted small">Format: Name,Email,Phone,Company</p>
+        <p class="text-muted small">
+          Format: Name,Email,Phone,Company
+          <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" (click)="downloadImportTemplate()">Download template</button>
+        </p>
         <form (ngSubmit)="importLeads()">
           <div class="form-group mb-3">
             <label class="form-label" for="importFile">CSV file</label>
@@ -99,21 +185,35 @@
 </div>
 }
 
+@if (selectedLeadIds().size > 0) {
+  <div class="card card-round mb-3 bulk-action-bar">
+    <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span>{{ selectedLeadIds().size }} selected</span>
+      <button type="button" class="btn btn-primary btn-sm" data-tour="bulk-whatsapp-button" (click)="openBulkPicker()">
+        <i class="fab fa-whatsapp"></i> Send WhatsApp Message
+      </button>
+    </div>
+  </div>
+}
+
 @if (loading()) {
-  <p class="text-muted">Loading...</p>
+  <app-loader />
 } @else {
-  <div class="card card-round mt-1">
+  <div class="leads-table-desktop card card-round mt-1">
     <div class="card-body">
       <div class="table-responsive">
-        <table class="table table-hover table-card-mobile">
+        <table class="table table-hover">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Company</th>
+              <th class="col-select"><input type="checkbox" class="form-check-input" [checked]="allSelected()" (change)="toggleSelectAll()" /></th>
+              <th class="col-name">Name</th>
+              <th class="col-email">Email</th>
+              <th class="col-phone">Phone</th>
+              <th class="col-company">Company</th>
               <th>Stage</th>
-              <th>Source</th>
+              <th>Owner</th>
+              <th class="col-source">Source</th>
+              <th>Cost</th>
               <th></th>
             </tr>
           </thead>
@@ -121,10 +221,11 @@
             @for (lead of leads(); track lead.id) {
               @if (editingId() === lead.id) {
                 <tr>
-                  <td data-label="Name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
-                  <td data-label="Email"><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
-                  <td data-label="Phone"><input type="text" class="form-control form-control-sm" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
-                  <td data-label="Company"><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
+                  <td data-label="Select" class="col-select"></td>
+                  <td data-label="Name" class="col-name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
+                  <td data-label="Email" class="col-email"><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
+                  <td data-label="Phone" class="col-phone"><input type="tel" class="form-control form-control-sm" pattern="[0-9+\-\s()]*" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
+                  <td data-label="Company" class="col-company"><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
                   <td data-label="Stage">
                     <select class="form-select form-select-sm" [(ngModel)]="editStageId" name="editStage-{{ lead.id }}">
                       @for (s of stages(); track s.id) {
@@ -132,29 +233,50 @@
                       }
                     </select>
                   </td>
-                  <td data-label="Source" class="text-muted">{{ lead.source }}</td>
+                  <td data-label="Owner">
+                    <select class="form-select form-select-sm" [(ngModel)]="editOwnerUserId" name="editOwner-{{ lead.id }}">
+                      <option [value]="auth.currentUser()?.userId">Me</option>
+                      @for (u of orgUsers(); track u.id) {
+                        @if (u.id !== auth.currentUser()?.userId) {
+                          <option [value]="u.id">{{ u.displayName }}</option>
+                        }
+                      }
+                    </select>
+                  </td>
+                  <td data-label="Source" class="text-muted col-source">{{ lead.source }}</td>
+                  <td data-label="Cost" class="text-muted">{{ lead.totalCost | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
                   <td>
-                    <button type="button" class="btn btn-primary btn-sm" (click)="saveEdit(lead.id)">Save</button>
-                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEdit(lead.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
                   </td>
                 </tr>
               } @else {
                 <tr>
-                  <td data-label="Name">{{ lead.name }}</td>
-                  <td data-label="Email">{{ lead.email }}</td>
-                  <td data-label="Phone">{{ lead.phone }}</td>
-                  <td data-label="Company">{{ lead.company }}</td>
-                  <td data-label="Stage"><span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span></td>
-                  <td data-label="Source">{{ lead.source }}</td>
-                  <td>
-                    <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
-                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
+                  <td data-label="Select" class="col-select"><input type="checkbox" class="form-check-input" [checked]="isSelected(lead.id)" (change)="toggleSelected(lead.id)" /></td>
+                  <td data-label="Name" class="col-name">{{ lead.name }}</td>
+                  <td data-label="Email" class="col-email" [title]="lead.email">{{ lead.email }}</td>
+                  <td data-label="Phone" class="col-phone" [title]="lead.phone">{{ lead.phone }}</td>
+                  <td data-label="Company" class="col-company" [title]="lead.company">{{ lead.company }}</td>
+                  <td data-label="Stage">
+                    <span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span>
+                    @if (leadStuck(lead)) { <span class="badge badge-warning">Stuck</span> }
+                  </td>
+                  <td data-label="Owner">{{ ownerLabel(lead.ownerUserId) }}</td>
+                  <td data-label="Source" class="col-source">{{ lead.source }}</td>
+                  <td data-label="Cost">{{ lead.totalCost | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
+                  <td class="actions-cell">
+                    <div class="actions-cell-inner">
+                      <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
+                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
+                      <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteLead(lead)">Delete</button>
+                      <app-whatsapp-composer [phone]="lead.phone" [leadName]="lead.name" [yourName]="yourName" [templates]="templates()" />
+                    </div>
                   </td>
                 </tr>
               }
             } @empty {
               <tr>
-                <td colspan="7" class="text-muted">No leads yet.</td>
+                <td colspan="10" class="text-muted">No leads yet.</td>
               </tr>
             }
           </tbody>
@@ -162,4 +284,120 @@
       </div>
     </div>
   </div>
+
+  <div class="lead-card-list">
+    @for (lead of leads(); track lead.id) {
+      @if (editingId() === lead.id) {
+        <div class="lead-card">
+          <div class="form-group mb-2">
+            <label class="form-label" for="cardEditName-{{ lead.id }}">Name</label>
+            <input id="cardEditName-{{ lead.id }}" type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="cardEditName-{{ lead.id }}" />
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label" for="cardEditEmail-{{ lead.id }}">Email</label>
+            <input id="cardEditEmail-{{ lead.id }}" type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="cardEditEmail-{{ lead.id }}" />
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label" for="cardEditPhone-{{ lead.id }}">Phone</label>
+            <input id="cardEditPhone-{{ lead.id }}" type="tel" class="form-control form-control-sm" pattern="[0-9+\-\s()]*" [(ngModel)]="editPhone" name="cardEditPhone-{{ lead.id }}" />
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label" for="cardEditCompany-{{ lead.id }}">Company</label>
+            <input id="cardEditCompany-{{ lead.id }}" type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="cardEditCompany-{{ lead.id }}" />
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label" for="cardEditStage-{{ lead.id }}">Stage</label>
+            <select id="cardEditStage-{{ lead.id }}" class="form-select form-select-sm" [(ngModel)]="editStageId" name="cardEditStage-{{ lead.id }}">
+              @for (s of stages(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="cardEditOwner-{{ lead.id }}">Owner</label>
+            <select id="cardEditOwner-{{ lead.id }}" class="form-select form-select-sm" [(ngModel)]="editOwnerUserId" name="cardEditOwner-{{ lead.id }}">
+              <option [value]="auth.currentUser()?.userId">Me</option>
+              @for (u of orgUsers(); track u.id) {
+                @if (u.id !== auth.currentUser()?.userId) {
+                  <option [value]="u.id">{{ u.displayName }}</option>
+                }
+              }
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEdit(lead.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+            <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
+          </div>
+        </div>
+      } @else {
+        <div class="lead-card">
+          <!-- 1: actions -->
+          <div class="lead-card-actions">
+            <input type="checkbox" class="form-check-input" [checked]="isSelected(lead.id)" (change)="toggleSelected(lead.id)" />
+            <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
+            <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
+            <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteLead(lead)">Delete</button>
+            <app-whatsapp-composer [phone]="lead.phone" [leadName]="lead.name" [yourName]="yourName" [templates]="templates()" />
+          </div>
+          <div class="lead-card-actions lead-card-quick-add">
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'meeting' }" class="btn btn-label-secondary btn-sm">+ Meeting</a>
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'note' }" class="btn btn-label-secondary btn-sm">+ Note</a>
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'task' }" class="btn btn-label-secondary btn-sm">+ Task</a>
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'product' }" class="btn btn-label-secondary btn-sm">+ Product</a>
+          </div>
+
+          <!-- 2: basic details -->
+          <div class="lead-card-basic">
+            <div class="lead-card-name">{{ lead.name }}</div>
+            <div class="text-muted small">{{ lead.company || '—' }}</div>
+            <div class="text-muted small">Owner: {{ ownerLabel(lead.ownerUserId) }}</div>
+            <span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span>
+            @if (leadStuck(lead)) { <span class="badge badge-warning">Stuck</span> }
+          </div>
+
+          <!-- 3: collapsible rest -->
+          <button type="button" class="btn btn-label-secondary btn-sm lead-card-toggle" (click)="toggleExpanded(lead.id)">
+            {{ isExpanded(lead.id) ? 'Show less −' : 'Show more +' }}
+          </button>
+          @if (isExpanded(lead.id)) {
+            <div class="lead-card-details">
+              <div><span class="label">Email</span> {{ lead.email || '—' }}</div>
+              <div><span class="label">Phone</span> {{ lead.phone || '—' }}</div>
+              <div><span class="label">Source</span> {{ lead.source }}</div>
+              <div><span class="label">Cost</span> {{ lead.totalCost | currency: 'INR' : 'symbol' : '1.2-2' }}</div>
+            </div>
+          }
+        </div>
+      }
+    } @empty {
+      <div class="text-muted">No leads yet.</div>
+    }
+  </div>
+
+  @if (totalCount() > 0) {
+    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+      <span class="text-muted small">Showing {{ pageStart() }}-{{ pageEnd() }} of {{ totalCount() }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="page() === 1" (click)="goToPage(page() - 1)">Previous</button>
+        <span class="text-muted small">Page {{ page() }} of {{ totalPages() }}</span>
+        <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)">Next</button>
+      </div>
+    </div>
+  }
 }
+
+<app-whatsapp-bulk-picker
+  [open]="bulkPickerOpen()"
+  [templates]="templates()"
+  [selectedCount]="selectedLeadIds().size"
+  (confirmed)="onBulkMessageConfirmed($event)"
+  (closed)="bulkPickerOpen.set(false)"
+/>
+
+<app-whatsapp-queue-drawer
+  [open]="queueDrawerOpen()"
+  [leads]="queueLeads()"
+  [messageTemplate]="bulkMessageTemplate()"
+  [yourName]="yourName"
+  (closed)="queueDrawerOpen.set(false)"
+/>

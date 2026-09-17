@@ -1,0 +1,383 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
+  <h3 class="fw-bold mb-0">Reports</h3>
+  <a routerLink="/custom-reports/new" class="btn btn-primary btn-sm" data-tour="custom-report-button">+ Custom Report</a>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+<div class="card card-round mb-3">
+  <div class="card-header"><div class="card-title">Saved custom reports</div></div>
+  <div class="card-body">
+    @if (savedReportsLoading()) {
+      <app-loader />
+    } @else if (savedReports().length === 0) {
+      <p class="text-muted mb-0">No custom reports saved yet -- use "+ Custom Report" above to build one.</p>
+    } @else {
+      <div class="d-flex flex-wrap gap-2">
+        @for (report of savedReports(); track report.id) {
+          <div class="btn-group">
+            <a [routerLink]="['/custom-reports', report.id]" class="btn btn-label-secondary btn-sm">{{ report.name }}</a>
+            <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteSavedReport(report)">Delete</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<div class="range-toggle">
+  <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'week'" [class.btn-label-light]="range() !== 'week'" (click)="setRange('week')">This week</button>
+  <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'month'" [class.btn-label-light]="range() !== 'month'" (click)="setRange('month')">This month</button>
+  <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'all'" [class.btn-label-light]="range() !== 'all'" (click)="setRange('all')">All time</button>
+  <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'custom'" [class.btn-label-light]="range() !== 'custom'" (click)="setRange('custom')">Custom</button>
+</div>
+
+@if (range() === 'custom') {
+  <div class="d-flex align-items-end flex-wrap gap-2 mb-3">
+    <div class="form-group mb-0">
+      <label class="form-label" for="customFrom">From</label>
+      <input id="customFrom" name="customFrom" type="date" class="form-control form-control-sm" [(ngModel)]="customFrom" [max]="customTo || null" />
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="customTo">To</label>
+      <input id="customTo" name="customTo" type="date" class="form-control form-control-sm" [(ngModel)]="customTo" [min]="customFrom || null" />
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" (click)="applyCustomRange()">Apply</button>
+    @if (customRangeError()) {
+      <span class="text-danger small">{{ customRangeError() }}</span>
+    }
+  </div>
+}
+
+<div class="row mb-3">
+  <div class="col-md-8">
+    <div class="card card-round h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Lead volume &amp; conversion</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('lead-trends', 'lead-trend')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (leadVolumeLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <app-chart-line [points]="leadTrendPoints()" seriesLabel="Leads created" />
+          <p class="text-muted small mt-2 mb-0">
+            "Won"/"Lost" here means leads created in this range that are currently in a won or
+            lost stage -- not necessarily when they actually converted, since stage-change dates
+            aren't tracked separately.
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card card-round h-100">
+      <div class="card-header">
+        <div class="card-title">Won / Lost</div>
+      </div>
+      <div class="card-body">
+        @if (leadVolumeLoading()) {
+          <app-loader size="sm" />
+        } @else if (wonLost(); as wl) {
+          <div class="stat-pair">
+            <div class="stat-tile-row">
+              <span class="stat-icon won"><i class="fas fa-trophy"></i></span>
+              <div class="stat-tile won">
+                <span class="stat-value">{{ wl.won }}</span>
+                <span class="stat-label">Won</span>
+              </div>
+            </div>
+            <div class="stat-tile-row">
+              <span class="stat-icon lost"><i class="fas fa-times-circle"></i></span>
+              <div class="stat-tile lost">
+                <span class="stat-value">{{ wl.lost }}</span>
+                <span class="stat-label">Lost</span>
+              </div>
+            </div>
+          </div>
+          @if (conversionRate(); as rate) {
+            <p class="text-muted small mt-2 mb-0">{{ rate }}% conversion rate</p>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6">
+    <div class="card card-round h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Lead source breakdown</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('lead-sources', 'lead-source-breakdown')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (leadSourcesLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <ul class="pipeline-bars">
+            @for (item of leadSources(); track item.source) {
+              <li
+                class="pipeline-row"
+                style="cursor: pointer"
+                [style.font-weight]="selectedSource() === item.source ? 600 : 400"
+                (click)="selectSource(item.source)"
+                title="Click to see the leads behind this number"
+              >
+                <span class="pipeline-name">{{ item.source }}</span>
+                <span class="pipeline-bar-track">
+                  <span class="pipeline-bar-fill" [style.width.%]="sourceBarWidth(item.leadCount)"></span>
+                </span>
+                <span class="pipeline-count">{{ item.leadCount }}</span>
+              </li>
+            } @empty {
+              <li class="text-muted">No leads in this range.</li>
+            }
+          </ul>
+          @if (selectedSource(); as source) {
+            <div class="mt-3 pt-3" style="border-top: 1px solid var(--border-subtle)">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-bold small">Leads from "{{ source }}"</span>
+                <button type="button" class="btn btn-label-secondary btn-sm" (click)="selectedSource.set(null)">Close</button>
+              </div>
+              @if (sourceDetailsLoading()) {
+                <app-loader size="sm" />
+              } @else {
+                <div class="table-responsive">
+                  <table class="table table-hover table-card-mobile">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Stage</th>
+                        <th>Owner</th>
+                        <th>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (lead of sourceDetails(); track lead.id) {
+                        <tr>
+                          <td data-label="Name">{{ lead.name }}</td>
+                          <td data-label="Email">{{ lead.email || '—' }}</td>
+                          <td data-label="Stage"><span class="badge badge-primary">{{ lead.stageName }}</span></td>
+                          <td data-label="Owner">{{ ownerLabel(lead.ownerUserId) }}</td>
+                          <td data-label="Created">{{ lead.createdAtUtc | date: 'mediumDate' }}</td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5" class="text-muted">No leads from this source in range.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card card-round h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Task completion &amp; overdue</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('task-trends', 'task-completion-trend')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (taskCompletionLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <app-chart-line [points]="taskTrendPoints()" seriesLabel="Tasks completed" />
+          <div class="stat-tile-row mt-2">
+            <span class="stat-icon overdue"><i class="fas fa-exclamation-triangle"></i></span>
+            <div class="stat-tile overdue">
+              <span class="stat-value">{{ overdueTaskCount() ?? '—' }}</span>
+              <span class="stat-label">overdue right now, across the whole team</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6">
+    <div class="card card-round h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Leads by product</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('leads-by-product', 'leads-by-product')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (leadsByProductLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-hover table-card-mobile">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Lead count</th>
+                  <th>Total value</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of leadsByProduct(); track item.productId ?? 'none') {
+                  <tr>
+                    <td data-label="Product">{{ item.productName }}</td>
+                    <td data-label="Lead count">{{ item.leadCount }}</td>
+                    <td data-label="Total value">{{ item.totalValue | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="text-muted">No leads in this range.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card card-round h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Leads by owner</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('leads-by-owner', 'leads-by-owner')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (leadsByOwnerLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-hover table-card-mobile">
+              <thead>
+                <tr>
+                  <th>Owner</th>
+                  <th>Lead count</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of leadsByOwner(); track row.ownerUserId ?? 'none') {
+                  <tr>
+                    <td data-label="Owner">{{ row.ownerName }}</td>
+                    <td data-label="Lead count">{{ row.leadCount }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="2" class="text-muted">No leads in this range.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6">
+    <div class="card card-round h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Leads by category</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('leads-by-category', 'leads-by-category')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (leadsByCategoryLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-hover table-card-mobile">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Lead count</th>
+                  <th>Total value</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of leadsByCategory(); track item.category) {
+                  <tr>
+                    <td data-label="Category">{{ item.category }}</td>
+                    <td data-label="Lead count">{{ item.leadCount }}</td>
+                    <td data-label="Total value">{{ item.totalValue | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="text-muted">No leads in this range.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card card-round">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title">Team performance</div>
+        <button type="button" class="btn btn-label-secondary btn-sm" title="Export to Excel" (click)="exportReport('team-performance', 'team-performance')">
+          <i class="fas fa-file-excel"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (teamPerformanceLoading()) {
+          <app-loader size="sm" />
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-hover table-card-mobile">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Leads created</th>
+                  <th>Tasks completed</th>
+                  <th>Tasks overdue</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of teamPerformance(); track row.userId) {
+                  <tr>
+                    <td data-label="Name">{{ row.displayName }}</td>
+                    <td data-label="Leads created">{{ row.leadsCreated }}</td>
+                    <td data-label="Tasks completed">{{ row.tasksCompleted }}</td>
+                    <td data-label="Tasks overdue">{{ row.tasksOverdue }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="text-muted">No activity in this range.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

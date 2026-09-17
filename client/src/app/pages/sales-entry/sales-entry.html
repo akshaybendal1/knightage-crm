@@ -1,0 +1,134 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
+  <h3 class="fw-bold mb-0" data-tour="page-header">Add Sales Entry</h3>
+</div>
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card card-round">
+        <div class="card-body">
+          <form (ngSubmit)="submit()">
+            <div class="form-group mb-3">
+              <label class="form-label">Owner</label>
+              <p class="form-control-plaintext mb-0 owner-value">{{ auth.currentUser()?.displayName }}</p>
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="customerName">Customer name</label>
+              <input id="customerName" name="customerName" type="text" class="form-control" [(ngModel)]="customerName" required />
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="company">Customer organization <span class="text-muted">(optional)</span></label>
+              <input id="company" name="company" type="text" class="form-control" [(ngModel)]="company" />
+            </div>
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="form-group mb-3">
+                  <label class="form-label" for="email">Customer email <span class="text-muted">(optional)</span></label>
+                  <input id="email" name="email" type="email" class="form-control" [(ngModel)]="email" />
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="form-group mb-3">
+                  <label class="form-label" for="phone">Customer phone <span class="text-muted">(optional)</span></label>
+                  <input id="phone" name="phone" type="tel" class="form-control" [(ngModel)]="phone" />
+                </div>
+              </div>
+            </div>
+
+            <label class="form-label">Products</label>
+            <div class="card card-round mb-3">
+              <div class="card-body">
+                @if (lines().length > 0) {
+                  <table class="table table-sm mb-3">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Stage</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (line of lines(); track $index) {
+                        <tr>
+                          <td>{{ line.productName }}</td>
+                          <td>{{ line.quantity }}</td>
+                          <td>{{ line.productStageName }}</td>
+                          <td>
+                            <button type="button" class="btn btn-label-danger btn-sm" (click)="removeLine($index)">Remove</button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+                <div class="d-flex gap-2 flex-wrap align-items-start">
+                  <select class="form-select" style="max-width: 220px;" name="newProductId" [(ngModel)]="newProductId">
+                    <option value="" disabled selected>Choose a product...</option>
+                    @for (product of products(); track product.id) {
+                      <option [value]="product.id">{{ product.name }}</option>
+                    }
+                  </select>
+                  <input type="number" class="form-control" style="max-width: 90px;" min="1" name="newQuantity" [(ngModel)]="newQuantity" />
+                  <div>
+                    <select
+                      class="form-select"
+                      style="max-width: 220px;"
+                      name="newProductStageId"
+                      [ngModel]="newProductStageId"
+                      (ngModelChange)="onProductStageSelectChange($event)"
+                    >
+                      <option value="" disabled>Choose a stage</option>
+                      @for (s of productStages(); track s.id) {
+                        <option [value]="s.id">{{ s.name }}</option>
+                      }
+                      <option value="__new__">+ Add new stage&hellip;</option>
+                    </select>
+                    @if (showNewProductStageInput) {
+                      <div class="d-flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          class="form-control form-control-sm"
+                          placeholder="New stage name"
+                          [(ngModel)]="newProductStageName"
+                          name="newProductStageName"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-primary btn-sm"
+                          [disabled]="savingNewProductStage() || !newProductStageName.trim()"
+                          (click)="createProductStageInline()"
+                        >
+                          {{ savingNewProductStage() ? 'Adding...' : 'Add' }}
+                        </button>
+                        <button type="button" class="btn btn-label-secondary btn-sm" (click)="showNewProductStageInput = false">Cancel</button>
+                      </div>
+                    }
+                  </div>
+                  <button type="button" class="btn btn-label-secondary" [disabled]="!newProductId || !newProductStageId" (click)="addLine()">Add product</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="notes">Notes <span class="text-muted">(optional)</span></label>
+              <textarea id="notes" name="notes" class="form-control" rows="3" [(ngModel)]="notes"></textarea>
+            </div>
+
+            <p class="text-muted small">
+              <i class="fas fa-location-dot me-1"></i>
+              Your device's current location is captured automatically when you submit.
+            </p>
+
+            @if (errorMessage()) {
+              <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+            }
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Log sales entry' }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+}

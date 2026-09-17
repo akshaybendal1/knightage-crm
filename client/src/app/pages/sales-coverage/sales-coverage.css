@@ -1,0 +1,14 @@
+/* Leaflet renders blank without an explicit container height. */
+.coverage-map {
+  height: 400px;
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.coverage-period-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 140px;
+  text-align: center;
+}

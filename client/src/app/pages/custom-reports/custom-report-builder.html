@@ -1,0 +1,258 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
+  <h3 class="fw-bold mb-0">
+    <a routerLink="/reports" class="text-muted text-decoration-none">Reports</a> /
+    {{ reportId() ? name() : 'New custom report' }}
+  </h3>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card card-round mb-3">
+      <div class="card-header"><div class="card-title">Fields</div></div>
+      <div class="card-body">
+        <label class="form-label">Group by (up to 2)</label>
+        @for (option of dimensionOptions; track option.key) {
+          <div class="form-check">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [id]="'dim-' + option.key"
+              [checked]="selectedDimensions().includes(option.key)"
+              (change)="toggleDimension(option.key)"
+            />
+            <label class="form-check-label" [for]="'dim-' + option.key">{{ option.label }}</label>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="card card-round mb-3">
+      <div class="card-header"><div class="card-title">View as</div></div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-sm" [class.btn-primary]="viewType() === 'table'" [class.btn-label-light]="viewType() !== 'table'" (click)="setViewType('table')">Table</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="viewType() === 'bar'" [class.btn-label-light]="viewType() !== 'bar'" [disabled]="!canUseBarOrPie()" (click)="setViewType('bar')">Bar chart</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="viewType() === 'pie'" [class.btn-label-light]="viewType() !== 'pie'" [disabled]="!canUseBarOrPie()" (click)="setViewType('pie')">Pie chart</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="viewType() === 'line'" [class.btn-label-light]="viewType() !== 'line'" [disabled]="!canUseLine()" (click)="setViewType('line')">Line chart</button>
+        <button type="button" class="btn btn-sm" [class.btn-primary]="viewType() === 'pivot'" [class.btn-label-light]="viewType() !== 'pivot'" [disabled]="!canUsePivot()" (click)="setViewType('pivot')">Pivot</button>
+      </div>
+      @if (!canUseBarOrPie() || !canUseLine() || !canUsePivot()) {
+        <div class="card-body pt-0 text-muted small">
+          Bar/Pie need exactly 1 dimension. Line needs "Created date". Pivot needs exactly 2 dimensions.
+        </div>
+      }
+      @if (viewType() !== 'table') {
+        <div class="card-body pt-0">
+          <label class="form-label">Metric</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input type="radio" class="form-check-input" id="metricCount" name="metric" [checked]="metric() === 'leadCount'" (change)="setMetric('leadCount')" />
+              <label class="form-check-label" for="metricCount">Lead count</label>
+            </div>
+            <div class="form-check">
+              <input type="radio" class="form-check-input" id="metricValue" name="metric" [checked]="metric() === 'totalValue'" (change)="setMetric('totalValue')" />
+              <label class="form-check-label" for="metricValue">Total value</label>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="card card-round mb-3">
+      <div class="card-header"><div class="card-title">Filters</div></div>
+      <div class="card-body">
+        <div class="range-toggle mb-3">
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'week'" [class.btn-label-light]="range() !== 'week'" (click)="setRange('week')">This week</button>
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'month'" [class.btn-label-light]="range() !== 'month'" (click)="setRange('month')">This month</button>
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'all'" [class.btn-label-light]="range() !== 'all'" (click)="setRange('all')">All time</button>
+          <button type="button" class="btn btn-sm" [class.btn-primary]="range() === 'custom'" [class.btn-label-light]="range() !== 'custom'" (click)="setRange('custom')">Custom</button>
+        </div>
+
+        @if (range() === 'custom') {
+          <div class="d-flex align-items-end flex-wrap gap-2 mb-3">
+            <div class="form-group mb-0">
+              <label class="form-label" for="customFrom">From</label>
+              <input id="customFrom" name="customFrom" type="date" class="form-control form-control-sm" [(ngModel)]="customFrom" [max]="customTo || null" />
+            </div>
+            <div class="form-group mb-0">
+              <label class="form-label" for="customTo">To</label>
+              <input id="customTo" name="customTo" type="date" class="form-control form-control-sm" [(ngModel)]="customTo" [min]="customFrom || null" />
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" (click)="applyCustomRange()">Apply</button>
+            @if (customRangeError()) {
+              <span class="text-danger small">{{ customRangeError() }}</span>
+            }
+          </div>
+        }
+
+        <div class="form-group mb-3">
+          <label class="form-label">Stage</label>
+          <div class="filter-dropdown">
+            <button type="button" class="filter-dropdown-toggle form-select form-select-sm" (click)="toggleFilterDropdown('stage', $event)">
+              {{ stageFilterLabel() }}
+            </button>
+            <div class="dropdown-menu filter-dropdown-menu" [class.show]="openFilterDropdown() === 'stage'">
+              @for (s of stages(); track s.id) {
+                <label class="dropdown-item filter-dropdown-item">
+                  <input type="checkbox" class="form-check-input" [checked]="selectedStageIds().includes(s.id)" (change)="toggleStageFilter(s.id)" />
+                  {{ s.name }}
+                </label>
+              } @empty {
+                <span class="dropdown-item filter-dropdown-item text-muted">No stages yet.</span>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Product</label>
+          <div class="filter-dropdown">
+            <button type="button" class="filter-dropdown-toggle form-select form-select-sm" (click)="toggleFilterDropdown('product', $event)">
+              {{ productFilterLabel() }}
+            </button>
+            <div class="dropdown-menu filter-dropdown-menu" [class.show]="openFilterDropdown() === 'product'">
+              @for (p of products(); track p.id) {
+                <label class="dropdown-item filter-dropdown-item">
+                  <input type="checkbox" class="form-check-input" [checked]="selectedProductIds().includes(p.id)" (change)="toggleProductFilter(p.id)" />
+                  {{ p.name }}
+                </label>
+              } @empty {
+                <span class="dropdown-item filter-dropdown-item text-muted">No products yet.</span>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Owner</label>
+          <div class="filter-dropdown">
+            <button type="button" class="filter-dropdown-toggle form-select form-select-sm" (click)="toggleFilterDropdown('owner', $event)">
+              {{ ownerFilterLabel() }}
+            </button>
+            <div class="dropdown-menu filter-dropdown-menu" [class.show]="openFilterDropdown() === 'owner'">
+              @for (u of orgUsers(); track u.id) {
+                <label class="dropdown-item filter-dropdown-item">
+                  <input type="checkbox" class="form-check-input" [checked]="selectedOwnerIds().includes(u.id)" (change)="toggleOwnerFilter(u.id)" />
+                  {{ u.displayName }}
+                </label>
+              } @empty {
+                <span class="dropdown-item filter-dropdown-item text-muted">No team members yet.</span>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">Source</label>
+          <div class="filter-dropdown">
+            <button type="button" class="filter-dropdown-toggle form-select form-select-sm" (click)="toggleFilterDropdown('source', $event)">
+              {{ sourceFilterLabel() }}
+            </button>
+            <div class="dropdown-menu filter-dropdown-menu" [class.show]="openFilterDropdown() === 'source'">
+              @for (s of sourceOptions; track s) {
+                <label class="dropdown-item filter-dropdown-item">
+                  <input type="checkbox" class="form-check-input" [checked]="selectedSources().includes(s)" (change)="toggleSourceFilter(s)" />
+                  {{ s }}
+                </label>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-round mb-3">
+      <div class="card-header"><div class="card-title">Save</div></div>
+      <div class="card-body">
+        <div class="form-group mb-3">
+          <label class="form-label" for="reportName">Name</label>
+          <input id="reportName" type="text" class="form-control" [ngModel]="name()" (ngModelChange)="name.set($event)" placeholder="e.g. Leads by stage this month" />
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary" [disabled]="saveDisabled()" (click)="save()">{{ saving() ? 'Saving...' : (reportId() ? 'Save changes' : 'Save report') }}</button>
+          <button type="button" class="btn btn-label-secondary" [disabled]="rows().length === 0" (click)="exportReport()">Export</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card card-round">
+      <div class="card-body">
+        @if (loading()) {
+          <app-loader />
+        } @else if (selectedDimensions().length === 0) {
+          <p class="text-muted">Pick at least one field to see a preview.</p>
+        } @else if (rows().length === 0) {
+          <p class="text-muted">No data matches these filters.</p>
+        } @else {
+          @switch (viewType()) {
+            @case ('bar') {
+              <app-chart-bar [points]="chartPoints()" [seriesLabel]="metric() === 'leadCount' ? 'Leads' : 'Value'" />
+            }
+            @case ('line') {
+              <app-chart-line [points]="chartPoints()" [seriesLabel]="metric() === 'leadCount' ? 'Leads' : 'Value'" />
+            }
+            @case ('pie') {
+              <app-chart-pie [points]="chartPoints()" />
+            }
+            @case ('pivot') {
+              @if (pivot(); as p) {
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead>
+                      <tr>
+                        <th></th>
+                        @for (col of p.columns; track col) {
+                          <th>{{ col }}</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of p.rows; track row.label) {
+                        <tr>
+                          <td class="fw-semibold">{{ row.label }}</td>
+                          @for (value of row.values; track $index) {
+                            <td>{{ metric() === 'totalValue' ? (value | currency: 'INR' : 'symbol' : '1.0-0') : value }}</td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+            @default {
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>{{ dimensionLabel(selectedDimensions()[0]) }}</th>
+                      @if (selectedDimensions().length > 1) {
+                        <th>{{ dimensionLabel(selectedDimensions()[1]) }}</th>
+                      }
+                      <th>Lead Count</th>
+                      <th>Total Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of rows(); track $index) {
+                      <tr>
+                        <td>{{ row.dim1Label }}</td>
+                        @if (selectedDimensions().length > 1) {
+                          <td>{{ row.dim2Label }}</td>
+                        }
+                        <td>{{ row.leadCount }}</td>
+                        <td>{{ row.totalValue | currency: 'INR' : 'symbol' : '1.0-0' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>

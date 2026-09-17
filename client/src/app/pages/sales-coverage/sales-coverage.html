@@ -1,0 +1,62 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3">
+  <h3 class="fw-bold mb-0" data-tour="page-header">Sales Coverage</h3>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+}
+
+<div class="card card-round mb-3">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="card-title">Sales coverage</div>
+    <div class="range-toggle">
+      <button type="button" class="btn btn-sm" [class.btn-primary]="coverageGranularity() === 'day'" [class.btn-label-light]="coverageGranularity() !== 'day'" (click)="setCoverageGranularity('day')">Day</button>
+      <button type="button" class="btn btn-sm" [class.btn-primary]="coverageGranularity() === 'week'" [class.btn-label-light]="coverageGranularity() !== 'week'" (click)="setCoverageGranularity('week')">Week</button>
+      <button type="button" class="btn btn-sm" [class.btn-primary]="coverageGranularity() === 'month'" [class.btn-label-light]="coverageGranularity() !== 'month'" (click)="setCoverageGranularity('month')">Month</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+      <label class="form-label mb-0" for="coverageRepFilter">Rep</label>
+      <select id="coverageRepFilter" class="form-select" style="max-width: 260px;" [(ngModel)]="coverageRepId" (ngModelChange)="onCoverageRepChange()">
+        @for (rep of reps(); track rep.id) {
+          <option [value]="rep.id">{{ rep.displayName }}</option>
+        }
+      </select>
+
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <button type="button" class="btn btn-sm btn-label-light" (click)="navigateCoverage(-1)" title="Previous period" aria-label="Previous period">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <span class="coverage-period-label">{{ coveragePeriod().label }}</span>
+        <button type="button" class="btn btn-sm btn-label-light" (click)="navigateCoverage(1)" title="Next period" aria-label="Next period">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+    @if (coverageError()) {
+      <div class="alert alert-danger py-2">{{ coverageError() }}</div>
+    }
+
+    <div class="row mb-3">
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">Locations</div>
+        <div class="h5 mb-0">{{ coverageEntries().length }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">Coverage area</div>
+        @if (coverageStats().hull.length >= 3) {
+          <div class="h5 mb-0">{{ coverageStats().areaKm2 | number: '1.2-2' }} km&sup2;</div>
+        } @else {
+          <div class="text-muted small">Not enough locations to compute an area yet</div>
+        }
+      </div>
+    </div>
+
+    @if (coverageLoading()) {
+      <app-loader size="sm" />
+    }
+    <div #coverageMap class="coverage-map"></div>
+  </div>
+</div>

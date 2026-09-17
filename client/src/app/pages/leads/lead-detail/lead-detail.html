@@ -5,7 +5,7 @@
 }
 
 @if (loading()) {
-  <p class="text-muted">Loading...</p>
+  <app-loader />
 } @else if (lead(); as l) {
   <h3 class="fw-bold mb-3">{{ l.name }}</h3>
 
@@ -13,22 +13,41 @@
     <div class="card-body">
       <div class="lead-summary">
         <div><span class="label">Email</span> {{ l.email || '—' }}</div>
-        <div><span class="label">Phone</span> {{ l.phone || '—' }}</div>
+        <div>
+          <span class="label">Phone</span> {{ l.phone || '—' }}
+          <app-whatsapp-composer [phone]="l.phone" [leadName]="l.name" [yourName]="yourName" [templates]="templates()" />
+        </div>
         <div><span class="label">Company</span> {{ l.company || '—' }}</div>
-        <div><span class="label">Stage</span> <span class="badge badge-primary">{{ stageName(l.pipelineStageId) }}</span></div>
+        <div>
+          <span class="label">Stage</span> <span class="badge badge-primary">{{ stageName(l.pipelineStageId) }}</span>
+          @if (leadStuck(l)) { <span class="badge badge-warning">Stuck</span> }
+        </div>
         <div><span class="label">Source</span> {{ l.source }}</div>
+        <div><span class="label">Owner</span> {{ ownerLabel(l.ownerUserId) }}</div>
+        <div><span class="label">Lead cost</span> {{ l.totalCost | currency: 'INR' : 'symbol' : '1.2-2' }}</div>
         @if (l.notes) {
           <div><span class="label">Notes</span> {{ l.notes }}</div>
+        }
+      </div>
+      <div class="lead-audit text-muted small mt-3">
+        <span [title]="l.createdAtUtc | date: 'medium'">Added by {{ userLabel(l.createdByUserId) }} on {{ l.createdAtUtc | date: 'mediumDate' }}</span>
+        @if (l.updatedAtUtc) {
+          <span [title]="l.updatedAtUtc | date: 'medium'"> &middot; Last updated by {{ userLabel(l.updatedByUserId) }} on {{ l.updatedAtUtc | date: 'mediumDate' }}</span>
         }
       </div>
     </div>
   </div>
 
-  <h4 class="fw-bold mb-3">Tasks</h4>
+  <div class="d-flex align-items-center justify-content-between mb-3" id="tasks-heading">
+    <h4 class="fw-bold mb-0">Tasks</h4>
+    <button type="button" class="btn btn-primary btn-sm" (click)="showTaskForm.set(!showTaskForm())">
+      {{ showTaskForm() ? 'Close' : '+ Add task' }}
+    </button>
+  </div>
 
   <ul class="task-list">
     @for (task of tasks(); track task.id) {
-      <li class="task-item" [class.completed]="task.status === 'Completed'">
+      <li class="task-item" [class.completed]="task.status === 'Completed'" [class.overdue]="isOverdue(task)">
         <input
           type="checkbox"
           [checked]="task.status === 'Completed'"
@@ -43,6 +62,12 @@
             Due <span [class.overdue]="isOverdue(task)" class="task-due">{{ task.dueDate | date: 'mediumDate' }}</span>
             &middot; Assigned to {{ assigneeLabel(task.assignedToUserId) }}
           </div>
+          <div class="text-muted small">
+            Added by {{ userLabel(task.createdByUserId) }}
+            @if (task.updatedAtUtc) {
+              &middot; Updated by {{ userLabel(task.updatedByUserId) }} on {{ task.updatedAtUtc | date: 'mediumDate' }}
+            }
+          </div>
         </div>
       </li>
     } @empty {
@@ -50,57 +75,352 @@
     }
   </ul>
 
-  <div class="card card-round mb-4">
-    <div class="card-header">
-      <div class="card-title">Add task</div>
-    </div>
-    <div class="card-body">
-      <form (ngSubmit)="addTask()">
-        <div class="form-group mb-3">
-          <label class="form-label" for="taskTitle">Title</label>
-          <input id="taskTitle" name="taskTitle" type="text" class="form-control" [(ngModel)]="newTaskTitle" required />
-        </div>
-        <div class="form-group mb-3">
-          <label class="form-label" for="taskDueDate">Due date</label>
-          <input id="taskDueDate" name="taskDueDate" type="date" class="form-control" [(ngModel)]="newTaskDueDate" required />
-        </div>
-        <div class="form-group mb-3">
-          <label class="form-label" for="taskDescription">Description</label>
-          <textarea id="taskDescription" name="taskDescription" rows="2" class="form-control" [(ngModel)]="newTaskDescription"></textarea>
-        </div>
-        <div class="form-group mb-3">
-          <label class="form-label" for="taskAssignee">Assign to</label>
-          <select id="taskAssignee" name="taskAssignee" class="form-select" [(ngModel)]="newTaskAssigneeId">
-            <option [value]="auth.currentUser()?.userId">Me</option>
-            @for (u of orgUsers(); track u.id) {
-              @if (u.id !== auth.currentUser()?.userId) {
-                <option [value]="u.id">{{ u.displayName }}</option>
+  @if (showTaskForm()) {
+    <div class="card card-round mb-4">
+      <div class="card-header">
+        <div class="card-title">Add task</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="addTask()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="taskTitle">Title</label>
+            <input id="taskTitle" name="taskTitle" type="text" class="form-control" [(ngModel)]="newTaskTitle" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="taskDueDate">Due date</label>
+            <input id="taskDueDate" name="taskDueDate" type="date" class="form-control" [(ngModel)]="newTaskDueDate" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="taskDescription">Description</label>
+            <textarea id="taskDescription" name="taskDescription" rows="2" class="form-control" [(ngModel)]="newTaskDescription"></textarea>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="taskAssignee">Assign to</label>
+            <select id="taskAssignee" name="taskAssignee" class="form-select" [(ngModel)]="newTaskAssigneeId">
+              <option [value]="auth.currentUser()?.userId">Me</option>
+              @for (u of orgUsers(); track u.id) {
+                @if (u.id !== auth.currentUser()?.userId) {
+                  <option [value]="u.id">{{ u.displayName }}</option>
+                }
               }
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" [disabled]="savingTask() || !newTaskTitle.trim() || !newTaskDueDate">
+            {{ savingTask() ? 'Saving...' : 'Add task' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  }
+
+  <div class="d-flex align-items-center justify-content-between mb-3" id="products-heading">
+    <h4 class="fw-bold mb-0">Products</h4>
+    <button type="button" class="btn btn-primary btn-sm" (click)="showLeadProductForm.set(!showLeadProductForm())">
+      {{ showLeadProductForm() ? 'Close' : '+ Add product' }}
+    </button>
+  </div>
+
+  <ul class="task-list">
+    @for (item of leadProducts(); track item.id) {
+      <li class="task-item">
+        <div>
+          <div class="task-title">
+            {{ item.productName }}
+            <span class="badge" [class]="productStatusClass(item)">{{ item.productStageName }}</span>
+            @if (productStuck(item)) { <span class="badge badge-warning">Stuck</span> }
+          </div>
+          <div class="text-muted small">
+            {{ item.unitPrice | currency: 'INR' : 'symbol' : '1.2-2' }} each &middot; Line total {{ item.quantity * item.unitPrice | currency: 'INR' : 'symbol' : '1.2-2' }}
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 task-item-actions">
+          <select
+            class="form-select form-select-sm lead-product-status"
+            [ngModel]="item.productStageId"
+            (ngModelChange)="updateLeadProductStage(item, $event)"
+          >
+            @for (s of productStages(); track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
             }
           </select>
+          <input
+            type="number"
+            min="1"
+            class="form-control form-control-sm lead-product-qty"
+            [value]="item.quantity"
+            #qtyInput
+            (change)="updateLeadProductQuantity(item, qtyInput.valueAsNumber)"
+          />
+          <button type="button" class="btn btn-label-secondary btn-sm" (click)="removeLeadProduct(item)">Remove</button>
         </div>
-        <button type="submit" class="btn btn-primary" [disabled]="savingTask() || !newTaskTitle.trim() || !newTaskDueDate">
-          {{ savingTask() ? 'Saving...' : 'Add task' }}
-        </button>
-      </form>
+      </li>
+    } @empty {
+      <li class="text-muted">No products added yet.</li>
+    }
+  </ul>
+
+  @if (showLeadProductForm()) {
+    <div class="card card-round mb-4">
+      <div class="card-header">
+        <div class="card-title">Add product</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="addLeadProduct()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="leadProductId">Product</label>
+            <select id="leadProductId" name="leadProductId" class="form-select" [(ngModel)]="newLeadProductId" required>
+              <option value="" disabled selected>Choose a product</option>
+              @for (p of activeProducts(); track p.id) {
+                <option [value]="p.id">{{ p.name }} ({{ p.price | currency: 'INR' : 'symbol' : '1.2-2' }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="leadProductQuantity">Quantity</label>
+            <input id="leadProductQuantity" name="leadProductQuantity" type="number" min="1" class="form-control" [(ngModel)]="newLeadProductQuantity" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="leadProductStageId">Stage</label>
+            <select
+              id="leadProductStageId"
+              name="leadProductStageId"
+              class="form-select"
+              [ngModel]="newLeadProductStageId"
+              (ngModelChange)="onProductStageSelectChange($event)"
+              required
+            >
+              <option value="" disabled>Choose a stage</option>
+              @for (s of productStages(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+              <option value="__new__">+ Add new stage&hellip;</option>
+            </select>
+            @if (showNewProductStageInput) {
+              <div class="d-flex gap-2 mt-2">
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  placeholder="New stage name"
+                  [(ngModel)]="newProductStageName"
+                  name="newProductStageName"
+                />
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  [disabled]="savingNewProductStage() || !newProductStageName.trim()"
+                  (click)="createProductStageInline()"
+                >
+                  {{ savingNewProductStage() ? 'Adding...' : 'Add' }}
+                </button>
+                <button type="button" class="btn btn-label-secondary btn-sm" (click)="showNewProductStageInput = false">Cancel</button>
+              </div>
+            }
+          </div>
+          <button type="submit" class="btn btn-primary" [disabled]="savingLeadProduct() || !newLeadProductId || newLeadProductQuantity < 1 || !newLeadProductStageId">
+            {{ savingLeadProduct() ? 'Adding...' : 'Add product' }}
+          </button>
+        </form>
+      </div>
     </div>
+  }
+
+  <div class="d-flex align-items-center justify-content-between mb-3" id="documents-heading">
+    <h4 class="fw-bold mb-0">Documents</h4>
+    <button type="button" class="btn btn-primary btn-sm" (click)="showDocumentForm.set(!showDocumentForm())">
+      {{ showDocumentForm() ? 'Close' : '+ New document' }}
+    </button>
   </div>
 
-  <h4 class="fw-bold mb-3">Activity timeline</h4>
-
-  <div class="card card-round mb-4">
-    <div class="card-body">
-      <form (ngSubmit)="addNote()">
-        <div class="form-group mb-3">
-          <label class="form-label" for="newNote">Add a note</label>
-          <textarea id="newNote" name="newNote" rows="3" class="form-control" [(ngModel)]="newNote" required></textarea>
+  <ul class="task-list">
+    @for (doc of documents(); track doc.id) {
+      <li class="task-item">
+        <div>
+          <div class="task-title">
+            {{ doc.number }}
+            <span class="badge" [class]="documentStatusClass(doc.status)">{{ doc.status }}</span>
+          </div>
+          <div class="text-muted small">
+            {{ doc.type }} &middot; {{ doc.total | currency: 'INR' : 'symbol' : '1.2-2' }}
+            @if (doc.discountPercent > 0) {
+              (discount {{ doc.discountPercent }}%, tax {{ doc.taxRatePercent }}%)
+            } @else {
+              (tax {{ doc.taxRatePercent }}%)
+            }
+            &middot; {{ doc.createdAtUtc | date: 'mediumDate' }}
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary" [disabled]="savingNote() || !newNote.trim()">
-          {{ savingNote() ? 'Saving...' : 'Add note' }}
-        </button>
-      </form>
+        <div class="d-flex align-items-center gap-2 task-item-actions">
+          <button type="button" class="btn btn-label-secondary btn-sm" (click)="downloadDocument(doc)">Download</button>
+          <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="sendingDocumentId() === doc.id" (click)="sendDocument(doc)">
+            {{ sendingDocumentId() === doc.id ? 'Sending...' : (doc.status === 'Draft' ? 'Send' : 'Resend') }}
+          </button>
+          @if (doc.type === 'Invoice' && doc.status === 'Sent') {
+            <button type="button" class="btn btn-label-secondary btn-sm" (click)="markDocumentPaid(doc)">Mark paid</button>
+          }
+        </div>
+      </li>
+    } @empty {
+      <li class="text-muted">No documents yet.</li>
+    }
+  </ul>
+
+  @if (showDocumentForm()) {
+    <div class="card card-round mb-4">
+      <div class="card-header">
+        <div class="card-title">New document</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="createDocument()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="documentType">Type</label>
+            <select id="documentType" name="documentType" class="form-select" [(ngModel)]="newDocumentType" required>
+              <option value="Quotation">Quotation</option>
+              <option value="Invoice">Invoice</option>
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="documentDiscount">Discount (%)</label>
+            <input id="documentDiscount" name="documentDiscount" type="number" min="0" max="100" step="0.01" class="form-control" [(ngModel)]="newDocumentDiscount" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="documentTaxRate">Tax rate (%)</label>
+            <input id="documentTaxRate" name="documentTaxRate" type="number" min="0" max="100" step="0.01" class="form-control" [(ngModel)]="newDocumentTaxRate" />
+          </div>
+          <button type="submit" class="btn btn-primary" [disabled]="savingDocument()">
+            {{ savingDocument() ? 'Creating...' : 'Create document' }}
+          </button>
+        </form>
+      </div>
     </div>
+  }
+
+  <div class="d-flex align-items-center justify-content-between mb-3" id="meetings-heading">
+    <h4 class="fw-bold mb-0">Meetings</h4>
+    <button type="button" class="btn btn-primary btn-sm" (click)="showMeetingForm.set(!showMeetingForm())">
+      {{ showMeetingForm() ? 'Close' : '+ Schedule meeting' }}
+    </button>
   </div>
+
+  @if (googleCalendarEnabled && calendarConnected() === false) {
+    <div class="card card-round mb-3">
+      <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+          <div class="fw-semibold">Google Calendar isn't connected</div>
+          <div class="text-muted small">Meetings you schedule below will still be saved, but won't sync to a calendar until you connect one.</div>
+        </div>
+        <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="connectingCalendar()" (click)="connectCalendar()">
+          {{ connectingCalendar() ? 'Connecting...' : 'Connect Google Calendar' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <ul class="task-list">
+    @for (meeting of meetings(); track meeting.id) {
+      <li class="task-item" [class.completed]="meeting.status === 'Completed'">
+        <div>
+          <div class="task-title">{{ meeting.title }}</div>
+          @if (meeting.description) {
+            <div class="text-muted small">{{ meeting.description }}</div>
+          }
+          <div class="text-muted small">
+            {{ meeting.startAtUtc | date: 'medium' }} &ndash; {{ meeting.endAtUtc | date: 'shortTime' }}
+            @if (meeting.location) {
+              &middot; {{ meeting.location }}
+            }
+            &middot; Owner {{ assigneeLabel(meeting.ownerUserId) }}
+          </div>
+          <div class="text-muted small mt-1">
+            <span class="badge" [class]="meetingStatusClass(meeting)">{{ meeting.status }}</span>
+            @if (googleCalendarEnabled) {
+              <span class="badge" [class]="meetingSyncClass(meeting)">{{ meetingSyncLabel(meeting) }}</span>
+            }
+          </div>
+        </div>
+        @if (meeting.status === 'Scheduled') {
+          <div class="d-flex gap-2 task-item-actions">
+            <button type="button" class="btn btn-label-secondary btn-sm" (click)="completeMeeting(meeting)">Complete</button>
+            <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelMeeting(meeting)">Cancel</button>
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="text-muted">No meetings scheduled yet.</li>
+    }
+  </ul>
+
+  @if (showMeetingForm()) {
+    <div class="card card-round mb-4">
+      <div class="card-header">
+        <div class="card-title">Schedule meeting</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="addMeeting()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="meetingTitle">Title</label>
+            <input id="meetingTitle" name="meetingTitle" type="text" class="form-control" [(ngModel)]="newMeetingTitle" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="meetingStart">Starts</label>
+            <input id="meetingStart" name="meetingStart" type="datetime-local" class="form-control" [(ngModel)]="newMeetingStartLocal" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="meetingEnd">Ends</label>
+            <input id="meetingEnd" name="meetingEnd" type="datetime-local" class="form-control" [(ngModel)]="newMeetingEndLocal" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="meetingLocation">Location</label>
+            <input id="meetingLocation" name="meetingLocation" type="text" class="form-control" [(ngModel)]="newMeetingLocation" placeholder="Optional" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="meetingDescription">Description</label>
+            <textarea id="meetingDescription" name="meetingDescription" rows="2" class="form-control" [(ngModel)]="newMeetingDescription"></textarea>
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="meetingOwner">Owner</label>
+            <select id="meetingOwner" name="meetingOwner" class="form-select" [(ngModel)]="newMeetingOwnerId">
+              <option [value]="auth.currentUser()?.userId">Me</option>
+              @for (u of orgUsers(); track u.id) {
+                @if (u.id !== auth.currentUser()?.userId) {
+                  <option [value]="u.id">{{ u.displayName }}</option>
+                }
+              }
+            </select>
+          </div>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="savingMeeting() || !newMeetingTitle.trim() || !newMeetingStartLocal || !newMeetingEndLocal"
+          >
+            {{ savingMeeting() ? 'Saving...' : 'Schedule meeting' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  }
+
+  <div class="d-flex align-items-center justify-content-between mb-3" id="notes-heading">
+    <h4 class="fw-bold mb-0" data-tour="lead-timeline">Activity timeline</h4>
+    <button type="button" class="btn btn-primary btn-sm" (click)="showNoteForm.set(!showNoteForm())">
+      {{ showNoteForm() ? 'Close' : '+ Add note' }}
+    </button>
+  </div>
+
+  @if (showNoteForm()) {
+    <div class="card card-round mb-4">
+      <div class="card-body">
+        <form (ngSubmit)="addNote()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="newNote">Add a note</label>
+            <textarea id="newNote" name="newNote" rows="3" class="form-control" [(ngModel)]="newNote" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" [disabled]="savingNote() || !newNote.trim()">
+            {{ savingNote() ? 'Saving...' : 'Add note' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  }
 
   <ul class="timeline">
     @for (activity of activities(); track activity.id) {

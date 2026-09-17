@@ -1,0 +1,33 @@
+:host {
+  display: inline-block;
+}
+
+.whatsapp-composer {
+  display: inline-block;
+}
+
+.whatsapp-composer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+}
+
+.whatsapp-composer-panel {
+  position: fixed;
+  z-index: 1041;
+  width: 260px;
+  max-width: calc(100vw - 24px);
+  text-align: left;
+  box-shadow: var(--box-shadow, 0 0.5rem 1rem rgba(0, 0, 0, 0.15));
+}
+
+.whatsapp-composer-file {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+}
+
+.whatsapp-composer-file span {
+  min-width: 0;
+}

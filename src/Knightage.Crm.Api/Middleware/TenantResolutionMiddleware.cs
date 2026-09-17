@@ -1,33 +1,58 @@
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Tenancy;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace Knightage.Crm.Api.Middleware;
 
 /// <summary>
-/// Resolves the caller's tenant database once per request (from the JWT's org_id claim) and
-/// stores it on the scoped CurrentTenantContext, which DapperContext reads when building its
-/// connection. Placed after UseAuthorization() so unauthorized requests never reach here at all.
-/// Only runs for endpoints that actually require authorization -- the Angular app's HTTP
-/// interceptor attaches the bearer token to every request once a user is logged in, including
-/// anonymous ones like /api/client-config, so IsAuthenticated alone isn't a safe gate: a real
-/// incident showed a broken/unprovisioned tenant taking down the anonymous bootstrap endpoint
-/// with it, which should never depend on tenant resolution at all.
+/// Resolves the caller's organization once per request (from the JWT's org_id claim) and
+/// stores it on the scoped TenantContext, which every repository reads to scope its queries
+/// against the single shared CRM database. Placed after UseAuthorization() so unauthorized
+/// requests never reach here at all. Only runs for endpoints that actually require
+/// authorization -- the Angular app's HTTP interceptor attaches the bearer token to every
+/// request once a user is logged in, including anonymous ones like /api/client-config, so
+/// IsAuthenticated alone isn't a safe gate.
 /// </summary>
 public class TenantResolutionMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<TenantResolutionMiddleware> _logger;
 
-    public TenantResolutionMiddleware(RequestDelegate next)
+    public TenantResolutionMiddleware(RequestDelegate next, ILogger<TenantResolutionMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, CurrentTenantContext tenantContext, ITenantDatabaseResolver resolver)
+    private static readonly HashSet<string> MutatingMethods = new(StringComparer.OrdinalIgnoreCase)
+    {
+        HttpMethods.Post, HttpMethods.Put, HttpMethods.Patch, HttpMethods.Delete
+    };
+
+    // A Disabled org must still be able to see WHY (the banner/Organization page's
+    // GET) and ask for help (the subscription-request POST) -- otherwise the block
+    // hides its own explanation and escape hatch behind itself.
+    private static bool IsSubscriptionEscapeHatch(HttpContext context)
+    {
+        var path = context.Request.Path.Value ?? string.Empty;
+        if (!path.StartsWith("/api/organization", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return HttpMethods.IsGet(context.Request.Method)
+            || path.EndsWith("/subscription-request", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public async Task InvokeAsync(HttpContext context, TenantContext tenantContext, IReminderDigestService reminderDigestService, ISubscriptionStatusProvider subscriptionStatusProvider)
     {
         var endpoint = context.GetEndpoint();
         var requiresAuthorization = endpoint?.Metadata.GetMetadata<IAuthorizeData>() is not null
             && endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null;
+
+        Guid? resolvedOrganizationId = null;
+        string? authorizationHeader = null;
 
         if (requiresAuthorization && context.User.Identity?.IsAuthenticated == true)
         {
@@ -39,36 +64,52 @@ public class TenantResolutionMiddleware
                 return;
             }
 
-            var authorizationHeader = context.Request.Headers.Authorization.ToString();
-            var resolution = await resolver.ResolveAsync(organizationId, authorizationHeader, context.RequestAborted);
-            if (resolution is null)
+            tenantContext.OrganizationId = organizationId;
+            resolvedOrganizationId = organizationId;
+            authorizationHeader = context.Request.Headers.Authorization.ToString();
+
+            // Blocks writes during the post-expiry grace period and everything once that
+            // grace period has also lapsed. Reads stay open in both states so a ReadOnly org
+            // can still see its own data, and Active is the default whenever the status
+            // lookup itself fails (see PlatformSubscriptionStatusProvider) -- an org is never
+            // locked out by a Platform hiccup.
+            var status = await subscriptionStatusProvider.GetStatusAsync(organizationId, authorizationHeader, context.RequestAborted);
+            var blocked = !IsSubscriptionEscapeHatch(context)
+                && (status == SubscriptionStatus.Disabled
+                    || (status == SubscriptionStatus.ReadOnly && MutatingMethods.Contains(context.Request.Method)));
+            if (blocked)
             {
-                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                await context.Response.WriteAsJsonAsync(new { message = "This organization's tenant database is not available yet." });
+                context.Response.StatusCode = StatusCodes.Status402PaymentRequired;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    message = status == SubscriptionStatus.Disabled
+                        ? "This organization's subscription has expired. Contact your administrator to renew."
+                        : "This organization's subscription is in its grace period -- viewing is available, but changes are disabled until it's renewed.",
+                    subscriptionStatus = status
+                });
                 return;
             }
-
-            // "Disabled" blocks everything; "ReadOnly" only blocks writes (every mutating
-            // endpoint in this API is GET or POST -- PUT/DELETE aren't used, see
-            // TasksController/PipelineStagesController/LeadsController), so a GET still
-            // succeeds and existing data stays visible instead of the app going dark outright.
-            if (resolution.SubscriptionStatus == "Disabled")
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(new { message = "This organization's subscription has ended. Contact your account manager to reactivate." });
-                return;
-            }
-
-            if (resolution.SubscriptionStatus == "ReadOnly" && !HttpMethods.IsGet(context.Request.Method))
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(new { message = "This organization's subscription has expired. The app is read-only until it's renewed." });
-                return;
-            }
-
-            tenantContext.DatabaseName = resolution.DatabaseName;
         }
 
         await _next(context);
+
+        if (resolvedOrganizationId is Guid orgId)
+        {
+            // Runs after the real response is already built, so it can never delay or
+            // interfere with it -- and, awaited inline (not a detached Task.Run), it
+            // stays within this request's own DI scope, so the scoped DapperContext and
+            // the forwarded-auth HttpClient call it makes both just work safely.
+            try
+            {
+                await reminderDigestService.RunIfDueAsync(orgId, authorizationHeader, context.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                // Best-effort, mirrors TeamService's welcome-email try/catch: a reminder
+                // failure must never surface as a failure of the actual request -- but it
+                // still gets logged so a broken integration isn't invisible.
+                _logger.LogError(ex, "Task reminder digest check failed for organization {OrganizationId}.", orgId);
+            }
+        }
     }
 }

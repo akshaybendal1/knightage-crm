@@ -1,0 +1,64 @@
+@if (phone()) {
+  <span class="whatsapp-composer">
+    <button #trigger type="button" class="whatsapp-icon-link" title="Message on WhatsApp" (click)="toggleOpen()">
+      <i class="fab fa-whatsapp"></i>
+    </button>
+
+    @if (open()) {
+      <div class="whatsapp-composer-backdrop" (click)="close()"></div>
+      <div class="whatsapp-composer-panel card card-round" [style.top.px]="panelTop()" [style.left.px]="panelLeft()" (click)="$event.stopPropagation()">
+        <div class="card-body">
+          <div class="form-group mb-2">
+            <label class="form-label small">Template</label>
+            <select
+              class="form-select form-select-sm"
+              [(ngModel)]="selectedTemplateId"
+              (ngModelChange)="onTemplateChange()"
+              name="template"
+            >
+              <option value="">Custom message</option>
+              @for (t of activeTemplates(); track t.id) {
+                <option [value]="t.id">{{ t.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label small">Message</label>
+            <textarea class="form-control form-control-sm" rows="3" [(ngModel)]="messageText" name="messageText"></textarea>
+          </div>
+          @if (fileAttachmentEnabled) {
+            <div class="form-group mb-2">
+              <label class="form-label small">Attach a file (optional)</label>
+              @if (selectedFile(); as file) {
+                <div class="whatsapp-composer-file d-flex align-items-center justify-content-between gap-2">
+                  <span class="text-truncate small" [title]="file.name">{{ file.name }}</span>
+                  <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearFile()">Remove</button>
+                </div>
+              } @else {
+                <input type="file" class="form-control form-control-sm" (change)="onFileSelected($event)" />
+              }
+            </div>
+          }
+          @if (selectedFile() && canNativeShare()) {
+            <button type="button" class="btn btn-primary btn-sm w-100 mb-2" (click)="shareWithFile()">
+              Share with file via WhatsApp
+            </button>
+          }
+          <a
+            [href]="sendLink()"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm"
+            [class]="selectedFile() && canNativeShare() ? 'btn-label-secondary' : 'btn-primary'"
+            (click)="close()"
+          >
+            Send via WhatsApp
+          </a>
+          @if (selectedFile() && !canNativeShare()) {
+            <p class="text-muted small mt-2 mb-0">Then attach "{{ selectedFile()!.name }}" yourself using WhatsApp's own attach button.</p>
+          }
+        </div>
+      </div>
+    }
+  </span>
+}

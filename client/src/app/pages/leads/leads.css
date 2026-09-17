@@ -1,0 +1,156 @@
+/* Email, Phone, Company and Source routinely run wider than their content
+   needs (measured 244/118/110/84px unconstrained against a 1021px wrapper
+   needing 1209px at a common 1366px laptop width) -- capping them (with a
+   title tooltip for the truncated ones) is most of the fix for the table
+   needing to scroll at all on a typical desktop. Cost is deliberately left
+   uncapped: truncating a currency amount would hide part of the number,
+   which is misleading in a way a truncated name/email isn't. */
+.col-email {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-phone {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-company {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-source {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* When the table does still need to scroll (narrower windows, more columns
+   than fit), pin Name so a scrolled-right row never loses which lead it is --
+   this is what was reading as "broken" rather than "scrollable" before. */
+.col-name {
+  position: sticky;
+  left: 0;
+  background: var(--bg-surface);
+  z-index: 1;
+}
+
+/* The actions <td> itself stays a normal table cell (so .table td's
+   vertical-align: middle centers it against the row's real height -- which
+   varies row-to-row since the Stage badges can wrap onto two lines). Putting
+   display:flex directly on the <td> used to opt it out of table-cell layout
+   entirely, so it fell back to its own content height and stuck to the top
+   of any row taller than that -- the buttons visibly crept upward on any row
+   whose Stage cell wrapped. The flex layout now lives on this inner wrapper
+   instead, one level down, so the <td> can still be centered as a whole. */
+.actions-cell-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* nowrap on desktop: with two more columns added to this table (Product,
+     Owner) there's no longer slack width for the actions column to fit
+     View/Edit/WhatsApp on one line, so flex-wrap was quietly stacking them
+     into a cramped vertical column instead of the intended horizontal row --
+     .table-responsive already provides horizontal scroll for exactly this
+     case, so let the table use it instead of squeezing this column. */
+  flex-wrap: nowrap;
+}
+
+/* Mobile card view (below 768px): a dedicated 3-section card per lead,
+   replacing the desktop table entirely rather than reusing the generic
+   .table-card-mobile row-stacking (see styles.css's Calendar section for the
+   same desktop-grid / mobile-list split pattern this mirrors). Section 1 is
+   the actions row(s) -- select/view/edit/whatsapp plus quick-add links that
+   navigate to Lead Detail with the matching form pre-opened. Section 2 is
+   the always-visible basics (name, company, owner, stage). Section 3 is the
+   rest (email, phone, source, cost), hidden behind a Show more/less toggle
+   so a long list of cards doesn't turn into a wall of text on a phone. */
+.lead-card-list {
+  display: none;
+}
+
+.lead-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.lead-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lead-card-quick-add {
+  margin-top: 8px;
+}
+
+.lead-card-basic {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+}
+
+.lead-card-name {
+  font-weight: 600;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.lead-card-basic .badge {
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.lead-card-toggle {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.lead-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lead-card-details .label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+@media (max-width: 767.98px) {
+  .leads-table-desktop {
+    display: none;
+  }
+
+  .lead-card-list {
+    display: block;
+  }
+
+  .actions-cell-inner {
+    /* Below 768px, table-card-mobile turns each <td> into a full-width
+       block (see styles.css) -- there's no horizontal-scroll fallback
+       there, so on a narrow phone the three actions may still need to wrap
+       onto a second line rather than overflow off-screen. */
+    flex-wrap: wrap;
+  }
+}

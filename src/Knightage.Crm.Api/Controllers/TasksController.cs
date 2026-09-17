@@ -21,14 +21,23 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetTasks([FromQuery] string? assignedToUserId, [FromQuery] string? status, [FromQuery] bool all = false)
+    public async Task<IActionResult> GetTasks(
+        [FromQuery] string? assignedToUserId,
+        [FromQuery] string? status,
+        [FromQuery] bool all = false,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
         // "all" is the manager/dashboard drill-down view (every user's tasks in this
         // tenant) -- there's no roles/permissions model yet to gate this behind, same
         // as every other endpoint in this service.
         if (all)
         {
-            return Ok(await _taskRepository.GetByAssigneeAsync(null, status));
+            var (allItems, allTotal) = await _taskRepository.GetByAssigneePagedAsync(null, status, page, pageSize);
+            return Ok(new { items = allItems, totalCount = allTotal });
         }
 
         var currentUserId = User.FindFirst("sub")?.Value;
@@ -38,7 +47,42 @@ public class TasksController : ControllerBase
             return Unauthorized();
         }
 
-        return Ok(await _taskRepository.GetByAssigneeAsync(targetUserId, status));
+        var (items, totalCount) = await _taskRepository.GetByAssigneePagedAsync(targetUserId, status, page, pageSize);
+        return Ok(new { items, totalCount });
+    }
+
+    [HttpGet("calendar")]
+    public async Task<IActionResult> GetCalendarTasks([FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] bool all = false)
+    {
+        // Same "all" semantics/no-role-gate as GetTasks above -- frontend gates the
+        // whole-team toggle to Owner/Admin, consistent with the rest of this API.
+        if (all)
+        {
+            var allItems = await _taskRepository.GetByDateRangeAsync(null, from.Date, to.Date);
+            return Ok(allItems);
+        }
+
+        var currentUserId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrWhiteSpace(currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        var items = await _taskRepository.GetByDateRangeAsync(currentUserId, from.Date, to.Date);
+        return Ok(items);
+    }
+
+    [HttpGet("due-count")]
+    public async Task<IActionResult> GetDueCount()
+    {
+        var currentUserId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrWhiteSpace(currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        var count = await _taskRepository.GetDueOrOverdueCountAsync(currentUserId, DateTime.UtcNow.Date);
+        return Ok(new { count });
     }
 
     [HttpPost("{id:guid}")]
@@ -58,8 +102,9 @@ public class TasksController : ControllerBase
         var wasCompleted = task.Status == "Completed";
         var isNowCompleted = request.Status == "Completed";
         DateTime? completedAtUtc = isNowCompleted ? (task.CompletedAtUtc ?? DateTime.UtcNow) : null;
+        var now = DateTime.UtcNow;
 
-        await _taskRepository.UpdateStatusAsync(id, request.Status, completedAtUtc);
+        await _taskRepository.UpdateStatusAsync(id, request.Status, completedAtUtc, User.FindFirst("sub")?.Value, now);
 
         if (isNowCompleted && !wasCompleted)
         {

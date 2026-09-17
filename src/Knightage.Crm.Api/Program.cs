@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 SqlMapper.AddTypeHandler(new UtcDateTimeHandler());
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -45,22 +46,75 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<CurrentTenantContext>();
-builder.Services.AddScoped<DapperContext>();
-builder.Services.AddScoped<ITenantDatabaseResolver, PlatformTenantDatabaseResolver>();
+builder.Services.AddScoped<TenantContext>();
+builder.Services.AddSingleton<DapperContext>();
 builder.Services.AddScoped<IPipelineStageRepository, PipelineStageRepository>();
+builder.Services.AddScoped<IMessageTemplateRepository, MessageTemplateRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ILeadRepository, LeadRepository>();
 builder.Services.AddScoped<ILeadActivityRepository, LeadActivityRepository>();
 builder.Services.AddScoped<ILeadTaskRepository, LeadTaskRepository>();
+builder.Services.AddScoped<IMeetingRepository, MeetingRepository>();
+builder.Services.AddScoped<ILeadProductRepository, LeadProductRepository>();
 builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IReportsRepository, ReportsRepository>();
 builder.Services.AddScoped<ILeadImportParser, CsvLeadImportParser>();
+builder.Services.AddScoped<ITimelineRepository, TimelineRepository>();
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddScoped<IProductStageRepository, ProductStageRepository>();
+builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+builder.Services.AddScoped<IDocumentPdfBuilder, DocumentPdfBuilder>();
+builder.Services.AddScoped<ISavedCustomReportRepository, SavedCustomReportRepository>();
+builder.Services.AddScoped<ICustomReportRepository, CustomReportRepository>();
+builder.Services.AddScoped<IOrganizationBrandingRepository, OrganizationBrandingRepository>();
+
+var identityBaseUrl = builder.Configuration["Client:IdentityBaseUrl"]
+    ?? throw new InvalidOperationException("Client:IdentityBaseUrl is not configured.");
+builder.Services.AddHttpClient("Identity", client =>
+{
+    client.BaseAddress = new Uri(identityBaseUrl);
+});
+builder.Services.AddScoped<IIdentityUserDirectory, IdentityUserDirectory>();
+builder.Services.AddScoped<IIdentityOrganizationClient, IdentityOrganizationClient>();
+builder.Services.AddHttpClient("IdentityCalendar", client =>
+{
+    client.BaseAddress = new Uri(identityBaseUrl);
+    // This call chain is CRM -> Identity -> Google, and a user's "save meeting" click
+    // must never hang on a Google round-trip -- kept longer than Identity's own ~5s
+    // timeout on its outbound Google call so Identity usually finishes (success or
+    // failure) before CRM gives up.
+    client.Timeout = TimeSpan.FromSeconds(8);
+});
+builder.Services.AddScoped<IIdentityCalendarClient, IdentityCalendarClient>();
+builder.Services.AddScoped<IReportExcelExporter, ReportExcelExporter>();
+builder.Services.AddScoped<IReportsService, ReportsService>();
 
 var platformBaseUrl = builder.Configuration["Services:PlatformBaseUrl"]
     ?? throw new InvalidOperationException("Services:PlatformBaseUrl is not configured.");
 builder.Services.AddHttpClient("Platform", client =>
 {
     client.BaseAddress = new Uri(platformBaseUrl);
+    // Short timeout: this call now sits on every authenticated request via
+    // TenantResolutionMiddleware, not just the once-a-day digest -- a hung Platform must
+    // fail fast, not stall every CRM request behind it.
+    client.Timeout = TimeSpan.FromSeconds(3);
 });
+builder.Services.AddScoped<ISubscriptionStatusProvider, PlatformSubscriptionStatusProvider>();
+
+// No SMTP host configured (the default for a fresh checkout, and for prod until real
+// creds are set) -> log instead of attempting a real connection, so nothing hangs/errors
+// on missing creds. Same pattern as knightage-identity's Program.cs.
+if (string.IsNullOrWhiteSpace(builder.Configuration["Smtp:Host"]))
+{
+    builder.Services.AddScoped<IEmailSender, NullEmailSender>();
+}
+else
+{
+    builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+}
+
+builder.Services.AddSingleton<ReminderDigestGate>();
+builder.Services.AddScoped<IReminderDigestService, ReminderDigestService>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured.");
@@ -101,6 +155,21 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Security headers missing entirely before this: no clickjacking protection, no MIME-sniffing
+// protection, no HSTS. Not going further into a full script-src/style-src CSP -- the app still
+// uses href="javascript:void(0)" for a few click handlers (app.html, login.html) and Angular's
+// own [style.width.%]-style bindings write inline styles, both of which a strict CSP without
+// 'unsafe-inline' would silently break. frame-ancestors covers the actual clickjacking risk
+// without touching either of those.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    context.Response.Headers.Append("Content-Security-Policy", "frame-ancestors 'none'");
+    await next();
+});
 
 app.UseHttpsRedirection();
 app.UseDefaultFiles();

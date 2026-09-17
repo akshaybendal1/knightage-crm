@@ -1,15 +1,28 @@
+/* flex, not grid: with CSS grid's auto-fit, every row shares the same fixed
+   column tracks, so a trailing row with fewer items than the grid has
+   columns leaves visible empty tracks to its right (happened here once
+   Product/Owner pushed the field count to 7 -- last row had 2 items and 3
+   empty tracks). Flexbox lays out each row independently and flex-grow
+   lets a short trailing row's items stretch to fill it, so the summary
+   looks balanced no matter how many fields it ends up with. */
 .lead-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.5rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
   max-width: 100%;
+}
+
+.lead-summary > div {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .lead-summary .label {
   display: block;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .timeline {
@@ -19,10 +32,10 @@
 }
 
 .timeline-item {
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  padding: 0.75rem 1rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
 }
 
@@ -38,47 +51,38 @@
 }
 
 .badge-stage-change {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--badge-purple-bg);
+  color: var(--badge-purple-text);
+  border-color: var(--badge-purple-text);
 }
 
 .badge-lead-created {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success);
 }
 
 .badge-task-completed {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: var(--warning);
 }
 
-.task-list {
-  list-style: none;
-  margin: 0 0 1rem;
-  padding: 0;
+.lead-product-qty {
+  width: 70px;
+  flex: 0 0 auto;
 }
 
-.task-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  padding: 0.6rem 0.9rem;
-  margin-bottom: 0.5rem;
+.lead-product-status {
+  width: 100px;
+  flex: 0 0 auto;
 }
 
-.task-item.completed .task-title {
-  text-decoration: line-through;
-  color: #9ca3af;
-}
-
-.task-item .task-title {
-  font-weight: 600;
-}
-
-.task-due.overdue {
-  color: #fd3369;
-  font-weight: 600;
+/* Meeting/product rows have two direct div children (content + action buttons) --
+   the shared .task-item > div rule (styles.css) gives both flex: 1 1 auto, which lets
+   the button group grow and, since its own buttons don't shrink or wrap, spill past
+   the card's right edge. Pinning the action-button wrapper to its content size fixes
+   that without touching the shared rule other pages still rely on. */
+.task-item > .task-item-actions {
+  flex: 0 0 auto;
 }

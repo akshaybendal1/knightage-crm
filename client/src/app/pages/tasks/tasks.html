@@ -1,4 +1,4 @@
-<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4" data-tour="page-header">
   <div>
     <h3 class="fw-bold mb-0">{{ showingAll ? 'All Open Tasks' : 'My Tasks' }}</h3>
   </div>
@@ -9,7 +9,7 @@
 }
 
 @if (loading()) {
-  <p class="text-muted">Loading...</p>
+  <app-loader />
 } @else {
   <ul class="task-list">
     @for (task of tasks(); track task.id) {
@@ -26,10 +26,27 @@
           <div class="task-due" [class.overdue]="isOverdue(task)">
             Due {{ task.dueDate | date: 'mediumDate' }}
           </div>
+          <div class="text-muted small">
+            Added by {{ userLabel(task.createdByUserId) }}
+            @if (task.updatedAtUtc) {
+              &middot; Updated by {{ userLabel(task.updatedByUserId) }} on {{ task.updatedAtUtc | date: 'mediumDate' }}
+            }
+          </div>
         </div>
       </li>
     } @empty {
       <li class="text-muted">No open tasks. You're all caught up.</li>
     }
   </ul>
+
+  @if (totalCount() > 0) {
+    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+      <span class="text-muted small">Showing {{ pageStart() }}-{{ pageEnd() }} of {{ totalCount() }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="page() === 1" (click)="goToPage(page() - 1)">Previous</button>
+        <span class="text-muted small">Page {{ page() }} of {{ totalPages() }}</span>
+        <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)">Next</button>
+      </div>
+    </div>
+  }
 }

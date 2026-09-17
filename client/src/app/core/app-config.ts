@@ -4,6 +4,8 @@ import { firstValueFrom } from 'rxjs';
 
 export interface ClientConfig {
   identityBaseUrl: string;
+  platformBaseUrl: string;
+  googleClientId: string | null;
 }
 
 /**
@@ -30,5 +32,17 @@ export class AppConfig {
       throw new Error('AppConfig was read before load() completed -- check the app initializer is registered.');
     }
     return config.identityBaseUrl;
+  }
+
+  get platformBaseUrl(): string {
+    const config = this.configState();
+    if (!config) {
+      throw new Error('AppConfig was read before load() completed -- check the app initializer is registered.');
+    }
+    return config.platformBaseUrl;
+  }
+
+  get googleClientId(): string | null {
+    return this.configState()?.googleClientId ?? null;
   }
 }

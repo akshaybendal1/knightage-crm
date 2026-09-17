@@ -4,10 +4,13 @@ import { DatePipe } from '@angular/common';
 import { IdentityApi } from '../../core/identity-api';
 import { Auth } from '../../core/auth';
 import { TeamMember } from '../../core/models';
+import { Toast } from '../../core/toast';
+import { buildWhatsAppLink } from '../../core/whatsapp';
+import { Loader } from '../../loader/loader';
 
 @Component({
   selector: 'app-team',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, Loader],
   templateUrl: './team.html',
   styleUrl: './team.css',
 })
@@ -20,15 +23,20 @@ export class Team implements OnInit {
   displayName = '';
   email = '';
   password = '';
-  role: 'Admin' | 'Member' = 'Member';
+  phone = '';
+  role: 'Admin' | 'Member' | 'Sales' = 'Member';
   adding = signal(false);
 
   editingId = signal<string | null>(null);
-  editRole: 'Admin' | 'Member' = 'Member';
+  editRole: 'Admin' | 'Member' | 'Sales' = 'Member';
+  savingRole = signal(false);
+
+  readonly whatsappLink = buildWhatsAppLink;
 
   constructor(
     private readonly identityApi: IdentityApi,
     protected readonly auth: Auth,
+    private readonly toast: Toast,
   ) {}
 
   ngOnInit(): void {
@@ -62,27 +70,34 @@ export class Team implements OnInit {
         email: this.email.trim(),
         password: this.password,
         role: this.role,
+        phoneNumber: this.phone.trim() || undefined,
       })
       .subscribe({
         next: () => {
           this.displayName = '';
           this.email = '';
           this.password = '';
+          this.phone = '';
           this.role = 'Member';
           this.adding.set(false);
           this.showForm.set(false);
+          this.toast.success('Teammate added.');
           this.load();
         },
         error: (err) => {
           this.adding.set(false);
-          this.errorMessage.set(err?.error?.message ?? 'Could not add this teammate.');
+          this.toast.error(err?.error?.message ?? 'Could not add this teammate.');
         },
       });
   }
 
+  teamWhatsappMessage(member: TeamMember): string {
+    return `Hi ${member.displayName}, this is ${this.auth.currentUser()?.displayName ?? ''}.`;
+  }
+
   startEditRole(member: TeamMember): void {
     this.editingId.set(member.id);
-    this.editRole = member.role as 'Admin' | 'Member';
+    this.editRole = member.role as 'Admin' | 'Member' | 'Sales';
   }
 
   cancelEditRole(): void {
@@ -90,19 +105,29 @@ export class Team implements OnInit {
   }
 
   saveRole(member: TeamMember): void {
+    this.savingRole.set(true);
     this.identityApi.updateTeamMemberRole(member.id, this.editRole).subscribe({
       next: () => {
+        this.savingRole.set(false);
         this.editingId.set(null);
+        this.toast.success('Role updated.');
         this.load();
       },
-      error: (err) => this.errorMessage.set(err?.error?.message ?? 'Could not update this role.'),
+      error: (err) => {
+        this.savingRole.set(false);
+        this.toast.error(err?.error?.message ?? 'Could not update this role.');
+      },
     });
   }
 
   toggleActive(member: TeamMember): void {
-    this.identityApi.setTeamMemberActive(member.id, !member.isActive).subscribe({
-      next: () => this.load(),
-      error: (err) => this.errorMessage.set(err?.error?.message ?? 'Could not update this member.'),
+    const activating = !member.isActive;
+    this.identityApi.setTeamMemberActive(member.id, activating).subscribe({
+      next: () => {
+        this.toast.success(activating ? 'Teammate reactivated.' : 'Teammate deactivated.');
+        this.load();
+      },
+      error: (err) => this.toast.error(err?.error?.message ?? 'Could not update this member.'),
     });
   }
 }

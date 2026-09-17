@@ -53,7 +53,8 @@
             "styles": [
               "public/theme/css/bootstrap.min.css",
               "public/theme/css/fonts.min.css",
-              "public/theme/css/kaiadmin.min.css",
+              "node_modules/driver.js/dist/driver.css",
+              "node_modules/leaflet/dist/leaflet.css",
               "src/styles.css"
             ]
           },
@@ -89,6 +90,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "client:build:production"

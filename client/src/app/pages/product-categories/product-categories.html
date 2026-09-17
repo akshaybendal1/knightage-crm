@@ -1,0 +1,81 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
+  <h3 class="fw-bold mb-0">Product Categories</h3>
+  <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
+    {{ showForm() ? 'Close' : '+ New Category' }}
+  </button>
+</div>
+
+@if (showForm()) {
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">New category</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="createCategory()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="name">Name</label>
+            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="name" required placeholder="e.g. Software" />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="sortOrder">Sort order</label>
+            <input id="sortOrder" name="sortOrder" type="number" class="form-control" [(ngModel)]="sortOrder" required />
+          </div>
+          @if (errorMessage()) {
+            <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="saving() || !name.trim()">{{ saving() ? 'Adding...' : 'Add category' }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="card card-round mt-3">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-card-mobile">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Sort order</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (category of categories(); track category.id) {
+              @if (editingId() === category.id) {
+                <tr>
+                  <td data-label="Name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ category.id }}" /></td>
+                  <td data-label="Sort order"><input type="number" class="form-control form-control-sm" [(ngModel)]="editSortOrder" name="editSortOrder-{{ category.id }}" /></td>
+                  <td>
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEdit(category.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td data-label="Name">{{ category.name }}</td>
+                  <td data-label="Sort order">{{ category.sortOrder }}</td>
+                  <td>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(category)">Edit</button>
+                    <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteCategory(category)">Delete</button>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="3" class="text-muted">No product categories yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

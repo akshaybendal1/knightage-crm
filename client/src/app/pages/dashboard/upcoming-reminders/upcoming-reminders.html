@@ -1,0 +1,53 @@
+<div class="card card-round">
+  <div class="card-header">
+    <div class="card-title">Upcoming reminders</div>
+  </div>
+  <div class="card-body">
+    @if (loading()) {
+      <app-loader size="sm" />
+    } @else if (!hasReminders()) {
+      <p class="text-muted mb-0">Nothing due in the next 24 hours.</p>
+    } @else {
+      @if (tasks().length > 0) {
+        <div class="text-muted small fw-semibold mb-2">Tasks</div>
+        <ul class="task-list">
+          @for (task of tasks(); track task.id) {
+            <li class="task-item" [class.overdue]="isOverdue(task)">
+              <div>
+                <div class="task-title">{{ task.title }}</div>
+                <div class="text-muted small">
+                  {{ task.leadName }} &middot; Due {{ task.dueDate | date: 'mediumDate' }}
+                </div>
+              </div>
+              @if (taskWhatsAppLink(task); as link) {
+                <a [href]="link" target="_blank" rel="noopener noreferrer" class="btn btn-label-secondary btn-sm" title="Remind myself on WhatsApp">
+                  <i class="fab fa-whatsapp"></i>
+                </a>
+              }
+            </li>
+          }
+        </ul>
+      }
+      @if (meetings().length > 0) {
+        <div class="text-muted small fw-semibold mb-2" [class.mt-3]="tasks().length > 0">Meetings</div>
+        <ul class="task-list">
+          @for (meeting of meetings(); track meeting.id) {
+            <li class="task-item">
+              <div>
+                <div class="task-title">{{ meeting.title }}</div>
+                <div class="text-muted small">
+                  {{ meeting.leadName }} &middot; {{ meeting.startAtUtc | date: 'medium' }}
+                </div>
+              </div>
+              @if (meetingWhatsAppLink(meeting); as link) {
+                <a [href]="link" target="_blank" rel="noopener noreferrer" class="btn btn-label-secondary btn-sm" title="Remind myself on WhatsApp">
+                  <i class="fab fa-whatsapp"></i>
+                </a>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  </div>
+</div>

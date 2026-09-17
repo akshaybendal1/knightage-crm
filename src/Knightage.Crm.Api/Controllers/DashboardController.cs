@@ -21,17 +21,27 @@ public class DashboardController : ControllerBase
         Ok(await _dashboardRepository.GetPipelineSummaryAsync());
 
     [HttpGet("won-lost")]
-    public async Task<IActionResult> GetWonLost([FromQuery] string range = "week")
+    public async Task<IActionResult> GetWonLost([FromQuery] string range = "week", [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
-        var since = range switch
+        DateTime? since;
+        DateTime? until = null;
+        if (range == "custom" && from.HasValue && to.HasValue)
         {
-            "week" => StartOfWeekUtc(DateTime.UtcNow),
-            "month" => StartOfMonthUtc(DateTime.UtcNow),
-            "all" => (DateTime?)null,
-            _ => StartOfWeekUtc(DateTime.UtcNow)
-        };
+            since = DateTime.SpecifyKind(from.Value.Date, DateTimeKind.Utc);
+            until = DateTime.SpecifyKind(to.Value.Date.AddDays(1), DateTimeKind.Utc);
+        }
+        else
+        {
+            since = range switch
+            {
+                "week" => StartOfWeekUtc(DateTime.UtcNow),
+                "month" => StartOfMonthUtc(DateTime.UtcNow),
+                "all" => (DateTime?)null,
+                _ => StartOfWeekUtc(DateTime.UtcNow)
+            };
+        }
 
-        var counts = await _dashboardRepository.GetWonLostCountsAsync(since);
+        var counts = await _dashboardRepository.GetWonLostCountsAsync(since, until);
         return Ok(new { counts.Won, counts.Lost, range });
     }
 
@@ -48,6 +58,19 @@ public class DashboardController : ControllerBase
         var count = await _dashboardRepository.GetOverdueOpenTaskCountAsync(DateTime.UtcNow.Date);
         return Ok(new { count });
     }
+
+    [HttpGet("stuck-leads")]
+    public async Task<IActionResult> GetStuckLeads()
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-StuckThresholdDays);
+        var count = await _dashboardRepository.GetStuckLeadsCountAsync(cutoff);
+        return Ok(new { count });
+    }
+
+    // No runtime-configurable threshold exists anywhere in this codebase (no org-settings
+    // table) -- kept in sync by hand with the web client's stuck-status.ts
+    // STUCK_THRESHOLD_DAYS and the Android client's StuckStatus.kt STUCK_THRESHOLD_DAYS.
+    private const int StuckThresholdDays = 14;
 
     private static DateTime StartOfWeekUtc(DateTime utcNow)
     {
