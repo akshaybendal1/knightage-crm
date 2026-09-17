@@ -94,6 +94,7 @@
           <thead>
             <tr>
               <th>Customer</th>
+              <th>Company</th>
               <th>Products</th>
               <th>Value</th>
               @if (isAdminView()) {
@@ -112,6 +113,7 @@
                     <div class="text-muted small">{{ entry.email }} {{ entry.phone }}</div>
                   }
                 </td>
+                <td data-label="Company">{{ entry.company || '—' }}</td>
                 <td data-label="Products">{{ entry.products || '—' }}</td>
                 <td data-label="Value">{{ entry.totalCost | number: '1.2-2' }}</td>
                 @if (isAdminView()) {
@@ -128,7 +130,7 @@
               </tr>
             } @empty {
               <tr>
-                <td [attr.colspan]="isAdminView() ? 6 : 5" class="text-muted">No sales entries yet.</td>
+                <td [attr.colspan]="isAdminView() ? 7 : 6" class="text-muted">No sales entries yet.</td>
               </tr>
             }
           </tbody>

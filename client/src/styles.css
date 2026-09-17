@@ -546,7 +546,7 @@ td button + button {
    Reports' "leads by source" breakdown) rather than repurposing those. */
 .pipeline-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.75rem;
 }
 
@@ -571,9 +571,15 @@ td button + button {
 }
 
 .pipeline-card-value {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--accent);
+  /* .card sets overflow-wrap: break-word, which otherwise splits a long currency
+     figure mid-digit (e.g. "42,26,50" / "0") once the card gets narrow -- a number
+     should wrap as a whole or overflow, never break inside its own digit groups. */
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 /* Timeline Kanban board -- horizontal scroll is contained to the board itself

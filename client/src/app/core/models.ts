@@ -99,6 +99,7 @@ export interface PagedLeads {
 export interface FieldSalesEntryItem {
   id: string;
   name: string;
+  company?: string | null;
   email?: string | null;
   phone?: string | null;
   notes?: string | null;
