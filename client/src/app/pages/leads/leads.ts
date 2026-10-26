@@ -536,8 +536,20 @@ export class Leads implements OnInit {
     this.duplicates.set(null);
   }
 
+  // "Change": unlink and search again; the details the customer filled in stay until another pick replaces them.
+  changeCustomer(): void {
+    this.selectedCustomer.set(null);
+    this.onIdentityChange();
+    setTimeout(() => document.getElementById('customerSearch')?.focus());
+  }
+
+  // "Clear": unlink and empty the details the customer filled in, back to a blank lead.
   clearCustomer(): void {
     this.selectedCustomer.set(null);
+    this.name = '';
+    this.email = '';
+    this.phone = '';
+    this.company = '';
     this.onIdentityChange();
   }
 

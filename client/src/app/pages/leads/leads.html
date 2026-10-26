@@ -135,7 +135,10 @@
                   <strong>{{ c.name }}</strong>
                   @if (c.company) { <span class="text-muted"> &middot; {{ c.company }}</span> }
                 </span>
-                <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearCustomer()">Change</button>
+                <span class="d-flex gap-2 flex-shrink-0">
+                  <button type="button" class="btn btn-label-secondary btn-sm" (click)="changeCustomer()" title="Pick a different customer; the details above stay">Change</button>
+                  <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearCustomer()" title="Remove the customer and empty the details it filled in">Clear</button>
+                </span>
               </div>
               <div class="form-text">This lead will be linked to this existing customer. Its name, email, phone and company were filled in above.</div>
             } @else {
