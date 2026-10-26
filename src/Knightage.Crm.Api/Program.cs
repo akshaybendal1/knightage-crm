@@ -208,9 +208,28 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Angular's esbuild output names every JS/CSS/font file with an 8-character content hash
+// (main-5M5O7VJD.js, media/fa-solid-900-3UXDGSX7.woff2), so a given URL never changes
+// content -- safe to cache for a year. index.html is the one file that must always be
+// revalidated, since it's what points at the current hashes; without that, the Android app
+// (a WebView on this site) can keep showing the previous release after a deploy. Files copied
+// from public/ keep stable names and get a short cache instead. Same rule as knightage-inventory-sales.
+var hashedAsset = new System.Text.RegularExpressions.Regex(@"-[A-Z0-9]{8}\.\w+$");
+var staticFileOptions = new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        var name = context.File.Name;
+        context.Context.Response.Headers.CacheControl =
+            name.Equals("index.html", StringComparison.OrdinalIgnoreCase) ? "no-cache"
+            : hashedAsset.IsMatch(name) ? "public, max-age=31536000, immutable"
+            : "public, max-age=86400";
+    }
+};
+
 app.UseHttpsRedirection();
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(staticFileOptions);
 app.UseCors("DevClients");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -220,6 +239,6 @@ app.MapControllers();
 // Angular client-side routes (e.g. /leads) aren't real server routes -- fall back to
 // index.html so the Angular router can handle them. Must come after MapControllers so API
 // routes still resolve normally.
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", staticFileOptions);
 
 app.Run();
