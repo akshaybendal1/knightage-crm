@@ -1,5 +1,7 @@
 # Deploying to IIS
 
+> **Superseded (2026-10-26):** production is configured through the server's preserved `appsettings.json` and deployed with `knightage-deploy`, not App Pool environment variables. Follow `docs/SOP.md` and `knightage-deploy/docs/SOP-Operations.md`; this file is kept for history.
+
 This service ships an API plus the Angular CRM UI (built into
 `src/Knightage.Crm.Api/wwwroot/browser`). It never gets its own SQL database
 created ahead of time — every tenant's CRM database is provisioned on demand
