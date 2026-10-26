@@ -48,6 +48,10 @@ export class IdentityApi {
     return this.http.post<void>(`${this.appConfig.identityBaseUrl}/api/users/me/change-password`, { currentPassword, newPassword });
   }
 
+  deleteMyAccount(confirmEmail: string, password: string | null) {
+    return this.http.post<void>(`${this.appConfig.identityBaseUrl}/api/users/me/delete`, { confirmEmail, password });
+  }
+
   getCalendarConnection() {
     return this.http.get<CalendarConnection>(`${this.appConfig.identityBaseUrl}/api/calendar/connection`);
   }

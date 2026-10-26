@@ -1,6 +1,6 @@
 <app-toast-container />
 
-@if (auth.isAuthenticated()) {
+@if (showShell()) {
   <div class="shell">
     <div class="sidebar-backdrop" [class.visible]="sidebarOpen()" (click)="closeSidebar()"></div>
 
@@ -18,114 +18,175 @@
         }
       </div>
       <nav class="sidebar-nav">
-        @if (auth.currentUser()?.role === 'Sales') {
-          @if (orgFeatures.fieldForceTrackingEnabled()) {
-            <div class="nav-section-label">Main</div>
-            <a routerLink="/sales-entry" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-              <i class="fas fa-plus-circle"></i>
-              <span>Add Sales Entry</span>
-            </a>
-            <a routerLink="/sales-dashboard" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-              <i class="fas fa-chart-bar"></i>
-              <span>Sales Dashboard</span>
-            </a>
-          }
-        } @else {
-          <div class="nav-section-label">Main</div>
-          <a routerLink="/dashboard" class="nav-link" routerLinkActive="active" data-tour="nav-dashboard" (click)="closeSidebar()">
-            <i class="fas fa-home"></i>
-            <span>Dashboard</span>
-          </a>
-          <a routerLink="/leads" class="nav-link" routerLinkActive="active" data-tour="nav-leads" (click)="closeSidebar()">
-            <i class="fas fa-user-tie"></i>
-            <span>Leads</span>
-          </a>
-          <a routerLink="/tasks" class="nav-link" routerLinkActive="active" data-tour="nav-tasks" (click)="closeSidebar()">
-            <i class="fas fa-check-square"></i>
-            <span>Tasks</span>
-            @if (dueTaskCount() > 0) {
-              <span class="nav-badge">{{ dueTaskCount() }}</span>
+        @if (screenAccess.loaded()) {
+          @if (compactMenu()) {
+            @if (orgFeatures.fieldForceTrackingEnabled() && screenAccess.canAny(fieldSalesScreens)) {
+              <div class="nav-section-label">Main</div>
+              @if (screenAccess.can('sales-entry')) {
+                <a routerLink="/sales-entry" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-plus-circle"></i>
+                  <span>Add Sales Entry</span>
+                </a>
+              }
+              @if (screenAccess.can('sales-dashboard')) {
+                <a routerLink="/sales-dashboard" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-chart-bar"></i>
+                  <span>Sales Dashboard</span>
+                </a>
+              }
+              @if (screenAccess.can('sales-coverage')) {
+                <a routerLink="/sales-coverage" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                  <i class="fas fa-map-location-dot"></i>
+                  <span>Sales Coverage</span>
+                </a>
+              }
             }
-          </a>
-          <a routerLink="/calendar" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Calendar</span>
-          </a>
+            @if (screenAccess.can('contact-us')) {
+              <div class="nav-section-label">Support</div>
+              <a routerLink="/contact-us" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                <i class="fas fa-envelope"></i>
+                <span>Contact Us</span>
+              </a>
+            }
+          } @else {
+            @if (screenAccess.canAny(mainScreens)) {
+              <div class="nav-section-label">Main</div>
+            }
+            @if (screenAccess.can('dashboard')) {
+              <a routerLink="/dashboard" class="nav-link" routerLinkActive="active" data-tour="nav-dashboard" (click)="closeSidebar()">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+              </a>
+            }
+            @if (screenAccess.can('leads')) {
+              <a routerLink="/leads" class="nav-link" routerLinkActive="active" data-tour="nav-leads" (click)="closeSidebar()">
+                <i class="fas fa-user-tie"></i>
+                <span>Leads</span>
+              </a>
+            }
+            @if (screenAccess.can('customers')) {
+              <a routerLink="/customers" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                <i class="fas fa-handshake"></i>
+                <span>Customers</span>
+              </a>
+            }
+            @if (screenAccess.can('tasks')) {
+              <a routerLink="/tasks" class="nav-link" routerLinkActive="active" data-tour="nav-tasks" (click)="closeSidebar()">
+                <i class="fas fa-check-square"></i>
+                <span>Tasks</span>
+                @if (dueTaskCount() > 0) {
+                  <span class="nav-badge">{{ dueTaskCount() }}</span>
+                }
+              </a>
+            }
+            @if (screenAccess.can('calendar')) {
+              <a routerLink="/calendar" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Calendar</span>
+              </a>
+            }
 
-          <button type="button" class="nav-link nav-group-toggle" data-tour="nav-pipeline-stages" (click)="toggleNavGroup('pipeline')">
-            <i class="fas fa-stream"></i>
-            <span>Pipeline</span>
-            <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('pipeline')"></i>
-          </button>
-          @if (isNavGroupOpen('pipeline')) {
-            <div class="nav-submenu">
-              <a routerLink="/pipeline-stages" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+            @if (screenAccess.canAny(pipelineScreens)) {
+              <button type="button" class="nav-link nav-group-toggle" data-tour="nav-pipeline-stages" (click)="toggleNavGroup('pipeline')">
                 <i class="fas fa-stream"></i>
-                <span>Pipeline Stages</span>
-              </a>
-              <a routerLink="/timeline" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                <i class="fas fa-history"></i>
-                <span>Timeline</span>
-              </a>
-            </div>
-          }
-
-          @if (auth.currentUser()?.role === 'Owner' || auth.currentUser()?.role === 'Admin') {
-            <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('catalog')">
-              <i class="fas fa-box"></i>
-              <span>Catalog</span>
-              <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('catalog')"></i>
-            </button>
-            @if (isNavGroupOpen('catalog')) {
-              <div class="nav-submenu">
-                <a routerLink="/products" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                  <i class="fas fa-box"></i>
-                  <span>Products</span>
-                </a>
-                <a routerLink="/product-categories" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                  <i class="fas fa-tags"></i>
-                  <span>Product Categories</span>
-                </a>
-              </div>
+                <span>Pipeline</span>
+                <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('pipeline')"></i>
+              </button>
+              @if (isNavGroupOpen('pipeline')) {
+                <div class="nav-submenu">
+                  @if (screenAccess.can('pipeline-stages')) {
+                    <a routerLink="/pipeline-stages" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-stream"></i>
+                      <span>Pipeline and Product Stages</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('timeline')) {
+                    <a routerLink="/timeline" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-history"></i>
+                      <span>Timeline</span>
+                    </a>
+                  }
+                </div>
+              }
             }
 
-            <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('insights')">
-              <i class="fas fa-chart-line"></i>
-              <span>Insights</span>
-              <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('insights')"></i>
-            </button>
-            @if (isNavGroupOpen('insights')) {
-              <div class="nav-submenu">
-                <a routerLink="/reports" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                  <i class="fas fa-chart-line"></i>
-                  <span>Reports</span>
-                </a>
-              </div>
+            @if (screenAccess.canAny(catalogScreens)) {
+              <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('catalog')">
+                <i class="fas fa-box"></i>
+                <span>Catalog</span>
+                <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('catalog')"></i>
+              </button>
+              @if (isNavGroupOpen('catalog')) {
+                <div class="nav-submenu">
+                  @if (screenAccess.can('products')) {
+                    <a routerLink="/products" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-box"></i>
+                      <span>Products</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('product-categories')) {
+                    <a routerLink="/product-categories" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-tags"></i>
+                      <span>Product Categories</span>
+                    </a>
+                  }
+                </div>
+              }
             }
 
-            <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('settings')">
-              <i class="fas fa-users-cog"></i>
-              <span>Settings</span>
-              <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('settings')"></i>
-            </button>
-            @if (isNavGroupOpen('settings')) {
-              <div class="nav-submenu">
-                <a routerLink="/team" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                  <i class="fas fa-users-cog"></i>
-                  <span>Team</span>
-                </a>
-                <a routerLink="/message-templates" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                  <i class="fas fa-comment-dots"></i>
-                  <span>Message Templates</span>
-                </a>
-                <a routerLink="/organization" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                  <i class="fas fa-building"></i>
-                  <span>Organization</span>
-                </a>
-              </div>
+            @if (screenAccess.can('reports')) {
+              <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('insights')">
+                <i class="fas fa-chart-line"></i>
+                <span>Insights</span>
+                <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('insights')"></i>
+              </button>
+              @if (isNavGroupOpen('insights')) {
+                <div class="nav-submenu">
+                  <a routerLink="/reports" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Reports</span>
+                  </a>
+                </div>
+              }
             }
 
-            @if (orgFeatures.fieldForceTrackingEnabled()) {
+            @if (screenAccess.canAny(settingsScreens)) {
+              <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('settings')">
+                <i class="fas fa-users-cog"></i>
+                <span>Settings</span>
+                <i class="fas fa-chevron-down nav-group-chevron" [class.open]="isNavGroupOpen('settings')"></i>
+              </button>
+              @if (isNavGroupOpen('settings')) {
+                <div class="nav-submenu">
+                  @if (screenAccess.can('team')) {
+                    <a routerLink="/team" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-users-cog"></i>
+                      <span>Team</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('message-templates')) {
+                    <a routerLink="/message-templates" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-comment-dots"></i>
+                      <span>Message Templates</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('organization')) {
+                    <a routerLink="/organization" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-building"></i>
+                      <span>Organization</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('access-control')) {
+                    <a routerLink="/access-control" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-user-lock"></i>
+                      <span>Access Control</span>
+                    </a>
+                  }
+                </div>
+              }
+            }
+
+            @if (orgFeatures.fieldForceTrackingEnabled() && screenAccess.canAny(fieldSalesScreens)) {
               <button type="button" class="nav-link nav-group-toggle" (click)="toggleNavGroup('fieldSales')">
                 <i class="fas fa-plus-circle"></i>
                 <span>Field Sales</span>
@@ -133,27 +194,47 @@
               </button>
               @if (isNavGroupOpen('fieldSales')) {
                 <div class="nav-submenu">
-                  <a routerLink="/sales-entry" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Add Sales Entry</span>
-                  </a>
-                  <a routerLink="/sales-dashboard" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Sales Dashboard</span>
-                  </a>
-                  <a routerLink="/sales-coverage" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-                    <i class="fas fa-map-location-dot"></i>
-                    <span>Sales Coverage</span>
-                  </a>
+                  @if (screenAccess.can('sales-entry')) {
+                    <a routerLink="/sales-entry" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-plus-circle"></i>
+                      <span>Add Sales Entry</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('sales-dashboard')) {
+                    <a routerLink="/sales-dashboard" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-chart-bar"></i>
+                      <span>Sales Dashboard</span>
+                    </a>
+                  }
+                  @if (screenAccess.can('sales-coverage')) {
+                    <a routerLink="/sales-coverage" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                      <i class="fas fa-map-location-dot"></i>
+                      <span>Sales Coverage</span>
+                    </a>
+                  }
                 </div>
               }
             }
+            @if (screenAccess.can('contact-us')) {
+              <div class="nav-section-label">Support</div>
+              <a routerLink="/contact-us" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+                <i class="fas fa-envelope"></i>
+                <span>Contact Us</span>
+              </a>
+            }
           }
-          <div class="nav-section-label">Support</div>
-          <a routerLink="/contact-us" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
-            <i class="fas fa-envelope"></i>
-            <span>Contact Us</span>
+          <div class="nav-section-label">Help</div>
+          <a routerLink="/user-guide" class="nav-link" routerLinkActive="active" (click)="closeSidebar()">
+            <i class="fas fa-book-open"></i>
+            <span>User Guide</span>
           </a>
+          <div class="nav-section-label">Apps</div>
+          @for (app of otherApps; track app.key) {
+            <a class="nav-link" [href]="appHomeUrl(app.key)" (click)="openApp($event, app.key)">
+              <i [class]="app.icon"></i>
+              <span>{{ app.name }}</span>
+            </a>
+          }
         }
       </nav>
     </aside>
@@ -181,12 +262,14 @@
           >
             <i class="fa" [class.fa-sun]="theme.current() === 'dark'" [class.fa-moon]="theme.current() === 'light'"></i>
           </button>
-          <a class="icon-btn" routerLink="/tasks" title="Due tasks">
-            <i class="fa fa-bell"></i>
-            @if (dueTaskCount() > 0) {
-              <span class="notif-dot">{{ dueTaskCount() }}</span>
-            }
-          </a>
+          @if (screenAccess.can('tasks')) {
+            <a class="icon-btn" routerLink="/tasks" title="Due tasks">
+              <i class="fa fa-bell"></i>
+              @if (dueTaskCount() > 0) {
+                <span class="notif-dot">{{ dueTaskCount() }}</span>
+              }
+            </a>
+          }
           <button type="button" class="icon-btn" (click)="tour.replay()" title="Replay product tour">
             <i class="fa fa-question-circle"></i>
           </button>
@@ -236,6 +319,17 @@
         </div>
       }
 
+      @if (recordUsageWarning(); as message) {
+        <div class="subscription-banner alert" [class.alert-warning]="!recordUsage() || recordUsage()!.current < recordUsage()!.max" [class.alert-danger]="recordUsage() && recordUsage()!.current >= recordUsage()!.max">
+          <span>{{ message }}</span>
+        </div>
+      }
+      @if (userUsageWarning(); as message) {
+        <div class="subscription-banner alert" [class.alert-warning]="!userUsage() || userUsage()!.current < userUsage()!.max" [class.alert-danger]="userUsage() && userUsage()!.current >= userUsage()!.max">
+          <span>{{ message }}</span>
+        </div>
+      }
+
       <main class="page-content">
         <router-outlet />
       </main>
@@ -248,41 +342,57 @@
           <nav class="footer-links">
             <a routerLink="/contact-us">Contact Us</a>
             <a href="mailto:contact@knightagetech.com">contact&#64;knightagetech.com</a>
+            <a routerLink="/privacy-policy">Privacy Policy</a>
+            <a routerLink="/terms-of-service">Terms of Service</a>
           </nav>
         </div>
       </footer>
     </div>
 
     <nav class="bottom-nav" aria-label="Primary">
-      @if (auth.currentUser()?.role === 'Sales') {
-        <a routerLink="/sales-entry" routerLinkActive="active" class="bottom-nav-item">
-          <i class="fas fa-plus-circle"></i>
-          <span>Add Entry</span>
-        </a>
-        <a routerLink="/sales-dashboard" routerLinkActive="active" class="bottom-nav-item">
-          <i class="fas fa-chart-bar"></i>
-          <span>Dashboard</span>
-        </a>
-      } @else {
-        <a routerLink="/dashboard" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-dashboard">
-          <i class="fas fa-home"></i>
-          <span>Home</span>
-        </a>
-        <a routerLink="/leads" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-leads">
-          <i class="fas fa-user-tie"></i>
-          <span>Leads</span>
-        </a>
-        <a routerLink="/tasks" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-tasks">
-          <i class="fas fa-check-square"></i>
-          <span>Tasks</span>
-          @if (dueTaskCount() > 0) {
-            <span class="bottom-nav-dot"></span>
+      @if (screenAccess.loaded()) {
+        @if (compactMenu()) {
+          @if (screenAccess.can('sales-entry')) {
+            <a routerLink="/sales-entry" routerLinkActive="active" class="bottom-nav-item">
+              <i class="fas fa-plus-circle"></i>
+              <span>Add Entry</span>
+            </a>
           }
-        </a>
-        <a routerLink="/pipeline-stages" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-pipeline-stages">
-          <i class="fas fa-stream"></i>
-          <span>Pipeline</span>
-        </a>
+          @if (screenAccess.can('sales-dashboard')) {
+            <a routerLink="/sales-dashboard" routerLinkActive="active" class="bottom-nav-item">
+              <i class="fas fa-chart-bar"></i>
+              <span>Dashboard</span>
+            </a>
+          }
+        } @else {
+          @if (screenAccess.can('dashboard')) {
+            <a routerLink="/dashboard" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-dashboard">
+              <i class="fas fa-home"></i>
+              <span>Home</span>
+            </a>
+          }
+          @if (screenAccess.can('leads')) {
+            <a routerLink="/leads" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-leads">
+              <i class="fas fa-user-tie"></i>
+              <span>Leads</span>
+            </a>
+          }
+          @if (screenAccess.can('tasks')) {
+            <a routerLink="/tasks" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-tasks">
+              <i class="fas fa-check-square"></i>
+              <span>Tasks</span>
+              @if (dueTaskCount() > 0) {
+                <span class="bottom-nav-dot"></span>
+              }
+            </a>
+          }
+          @if (screenAccess.can('pipeline-stages')) {
+            <a routerLink="/pipeline-stages" routerLinkActive="active" class="bottom-nav-item" data-tour="nav-pipeline-stages">
+              <i class="fas fa-stream"></i>
+              <span>Pipeline</span>
+            </a>
+          }
+        }
       }
       <button type="button" class="bottom-nav-item" (click)="toggleSidebar()">
         <i class="fas fa-bars"></i>

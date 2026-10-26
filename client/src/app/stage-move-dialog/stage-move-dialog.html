@@ -1,0 +1,93 @@
+@if (open()) {
+  <div class="stage-move-backdrop" (click)="cancel()">
+    <div
+      class="card card-round stage-move-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stageMoveTitle"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="card-header">
+        <div class="card-title" id="stageMoveTitle">{{ title() }}</div>
+      </div>
+      <div class="card-body">
+        @if (items().length === 1) {
+          <div class="form-group mb-3">
+            <label class="form-label" for="stageMoveNote">Note <span class="text-muted">(optional)</span></label>
+            <textarea
+              #firstField
+              id="stageMoveNote"
+              name="stageMoveNote"
+              class="form-control"
+              rows="3"
+              [maxlength]="maxNoteLength"
+              placeholder="Why is this moving? It is saved on the activity timeline."
+              [ngModel]="sharedNote()"
+              (ngModelChange)="sharedNote.set($event)"
+            ></textarea>
+          </div>
+        } @else {
+          <div class="stage-move-mode mb-3" role="radiogroup" aria-label="How to add notes">
+            <label class="form-check">
+              <input type="radio" class="form-check-input" name="stageMoveMode" value="same" [ngModel]="mode()" (ngModelChange)="mode.set($event)" />
+              <span class="form-check-label">Same note for all {{ items().length }}</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" class="form-check-input" name="stageMoveMode" value="each" [ngModel]="mode()" (ngModelChange)="mode.set($event)" />
+              <span class="form-check-label">A different note for each</span>
+            </label>
+          </div>
+
+          @if (mode() === 'same') {
+            <div class="form-group mb-2">
+              <label class="form-label" for="stageMoveNote">Note <span class="text-muted">(optional)</span></label>
+              <textarea
+                #firstField
+                id="stageMoveNote"
+                name="stageMoveNote"
+                class="form-control"
+                rows="3"
+                [maxlength]="maxNoteLength"
+                placeholder="Saved on every selected {{ noun() }}'s timeline."
+                [ngModel]="sharedNote()"
+                (ngModelChange)="sharedNote.set($event)"
+              ></textarea>
+            </div>
+            <ul class="stage-move-list text-muted small mb-3">
+              @for (item of items(); track item.id) {
+                <li>{{ item.label }}@if (item.sublabel) { <span> &middot; {{ item.sublabel }}</span> }</li>
+              }
+            </ul>
+          } @else {
+            <div class="stage-move-each mb-3">
+              @for (item of items(); track item.id; let i = $index) {
+                <div class="form-group mb-2">
+                  <label class="form-label small mb-1" [for]="'stageMoveNote-' + item.id">
+                    {{ item.label }}@if (item.sublabel) { <span class="text-muted"> &middot; {{ item.sublabel }}</span> }
+                  </label>
+                  <textarea
+                    [id]="'stageMoveNote-' + item.id"
+                    class="form-control form-control-sm"
+                    rows="2"
+                    [maxlength]="maxNoteLength"
+                    placeholder="Note (optional)"
+                    [ngModel]="noteFor(item.id)"
+                    (ngModelChange)="setNoteFor(item.id, $event)"
+                    [name]="'stageMoveNote-' + item.id"
+                  ></textarea>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="confirm()">
+            {{ busy() ? 'Moving...' : 'Move' }}
+          </button>
+          <button type="button" class="btn btn-label-secondary" [disabled]="busy()" (click)="cancel()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

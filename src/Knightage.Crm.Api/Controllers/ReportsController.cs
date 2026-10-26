@@ -1,10 +1,12 @@
 using Knightage.Crm.Core.Interfaces;
+using Knightage.Crm.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Knightage.Crm.Api.Controllers;
 
-[Authorize(Roles = "Owner,Admin")]
+[Authorize]
+[RequireScreen("reports")]
 [ApiController]
 [Route("api/reports")]
 public class ReportsController : ControllerBase

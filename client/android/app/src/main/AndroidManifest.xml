@@ -3,6 +3,7 @@
 
     <application
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -38,4 +39,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Foreground-only, on-demand: Field Sales's "Add Entry" form calls
+         navigator.geolocation.getCurrentPosition() when submitted. Capacitor's own
+         BridgeWebChromeClient already implements the WebView/Android permission
+         bridge for this (checks these two permissions, launches the runtime prompt,
+         relays the result back to the WebView); it was silently auto-denying every
+         request with no dialog at all because neither permission was declared here. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 </manifest>

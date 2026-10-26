@@ -38,6 +38,59 @@
     </div>
   </div>
 
+  <div class="card card-round mb-4" id="customer-card">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+          <span class="text-muted small text-uppercase fw-semibold me-2">Customer</span>
+          @if (leadCustomer(); as c) {
+            <strong data-testid="lead-customer-name">{{ c.name }}</strong>
+            @if (c.company) { <span class="text-muted"> &middot; {{ c.company }}</span> }
+            <span class="badge badge-secondary ms-1">{{ c.leadCount }} {{ c.leadCount === 1 ? 'lead' : 'leads' }}</span>
+          } @else {
+            <span class="text-muted">Not a customer yet</span>
+          }
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          @if (leadCustomer()) {
+            <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="customerBusy()" (click)="removeCustomerLink()">Remove link</button>
+          } @else {
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="customerBusy()" (click)="addLeadAsCustomer()">Add as customer</button>
+            <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="customerBusy()" (click)="toggleLinkSearch()">
+              {{ showLinkSearch() ? 'Close' : 'Link existing customer' }}
+            </button>
+          }
+        </div>
+      </div>
+      @if (showLinkSearch() && !leadCustomer()) {
+        <div class="customer-picker mt-3">
+          <input
+            id="linkCustomerSearch"
+            name="linkCustomerSearch"
+            type="search"
+            autocomplete="off"
+            class="form-control"
+            placeholder="Search existing customers by name, company, email or phone"
+            [(ngModel)]="linkQuery"
+            (input)="onLinkQueryChange()"
+          />
+          <ul class="customer-results customer-results-inline">
+            @for (c of linkResults(); track c.id) {
+              <li>
+                <button type="button" class="customer-result" (click)="linkExistingCustomer(c)">
+                  <span class="fw-semibold">{{ c.name }}</span>
+                  <span class="text-muted small">{{ customerDetail(c) }}</span>
+                </button>
+              </li>
+            } @empty {
+              <li class="customer-none text-muted small">No customer found.</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  </div>
+
   <div class="d-flex align-items-center justify-content-between mb-3" id="tasks-heading">
     <h4 class="fw-bold mb-0">Tasks</h4>
     <button type="button" class="btn btn-primary btn-sm" (click)="showTaskForm.set(!showTaskForm())">
@@ -120,9 +173,30 @@
     </button>
   </div>
 
+  @if (selectedProductIds().size > 0) {
+    <div class="card card-round mb-3 bulk-action-bar">
+      <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span>{{ selectedProductIds().size }} selected</span>
+        <div class="d-flex align-items-center flex-wrap gap-2">
+          <select class="form-select form-select-sm bulk-stage-select" aria-label="Move selected products to stage" [(ngModel)]="bulkProductStageId" name="bulkProductStageId">
+            <option value="">Move to stage&hellip;</option>
+            @for (s of productStages(); track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+          <button type="button" class="btn btn-primary btn-sm" [disabled]="!bulkProductStageId" (click)="startBulkProductMove()">Move</button>
+          <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearProductSelection()">Clear</button>
+        </div>
+      </div>
+    </div>
+  }
+
   <ul class="task-list">
     @for (item of leadProducts(); track item.id) {
-      <li class="task-item">
+      <li class="task-item task-item-stack">
+        @if (leadProducts().length > 1) {
+          <input type="checkbox" class="form-check-input me-2 flex-shrink-0" [checked]="isProductSelected(item.id)" (change)="toggleProductSelected(item.id)" [attr.aria-label]="'Select ' + item.productName" />
+        }
         <div>
           <div class="task-title">
             {{ item.productName }}
@@ -130,17 +204,17 @@
             @if (productStuck(item)) { <span class="badge badge-warning">Stuck</span> }
           </div>
           <div class="text-muted small">
-            {{ item.unitPrice | currency: 'INR' : 'symbol' : '1.2-2' }} each &middot; Line total {{ item.quantity * item.unitPrice | currency: 'INR' : 'symbol' : '1.2-2' }}
+            <span class="nowrap-part">{{ item.unitPrice | currency: 'INR' : 'symbol' : '1.2-2' }} each &middot;</span>&ngsp;<span class="nowrap-part">Line total {{ item.quantity * item.unitPrice | currency: 'INR' : 'symbol' : '1.2-2' }}</span>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2 task-item-actions">
           <select
             class="form-select form-select-sm lead-product-status"
-            [ngModel]="item.productStageId"
-            (ngModelChange)="updateLeadProductStage(item, $event)"
+            [attr.aria-label]="'Stage for ' + item.productName"
+            (change)="requestProductStageChange(item, $event)"
           >
             @for (s of productStages(); track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
+              <option [value]="s.id" [selected]="s.id === item.productStageId">{{ s.name }}</option>
             }
           </select>
           <input
@@ -430,7 +504,15 @@
           <span class="text-muted small">{{ authorLabel(activity) }}</span>
           <span class="text-muted small" [title]="activity.createdAtUtc | date: 'medium'">{{ timeAgo(activity.createdAtUtc) }}</span>
         </div>
-        <p>{{ activity.content }}</p>
+        <p>
+          {{ activity.content }}
+          @if (activityProductName(activity); as productName) {
+            <span class="text-muted"> &middot; {{ productName }}</span>
+          }
+        </p>
+        @if (activityNote(activity); as note) {
+          <p class="timeline-note">{{ note }}</p>
+        }
       </li>
     } @empty {
       <li class="text-muted">No activity yet — add the first note above.</li>
@@ -443,3 +525,13 @@
     </button>
   }
 }
+
+<app-stage-move-dialog
+  [open]="moveDialogOpen()"
+  noun="product"
+  [stageName]="moveDialogStageName()"
+  [items]="moveDialogItems()"
+  [busy]="moveBusy()"
+  (confirmed)="confirmMove($event)"
+  (closed)="cancelMove()"
+/>

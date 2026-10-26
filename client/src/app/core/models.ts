@@ -86,6 +86,48 @@ export interface LeadActivity {
   createdAtUtc: string;
 }
 
+// Access Control: which screens each role may open (see ScreenCatalog on the server).
+export type ScreenKind = 'Configurable' | 'AdminOnly' | 'Everyone';
+export type ConfigurableRole = 'Admin' | 'Member' | 'Sales';
+
+export interface ScreenAccessRow {
+  key: string;
+  label: string;
+  group: string;
+  kind: ScreenKind;
+  defaults: Record<ConfigurableRole, boolean>;
+  allowed: Record<ConfigurableRole, boolean>;
+}
+
+export interface ScreenAccessMatrix {
+  roles: ConfigurableRole[];
+  screens: ScreenAccessRow[];
+}
+
+export interface MyScreens {
+  role: string;
+  screens: string[];
+}
+
+// Bulk stage moves: one entry per lead / product line, each with its own optional note.
+export interface StageMoveItem {
+  id: string;
+  note?: string;
+}
+
+export interface StageMoveResult {
+  id: string;
+  status: 'Moved' | 'Unchanged' | 'NotFound' | 'Failed';
+  message?: string | null;
+}
+
+export interface BulkStageMoveResponse {
+  moved: number;
+  unchanged: number;
+  failed: number;
+  results: StageMoveResult[];
+}
+
 export interface PagedActivities {
   items: LeadActivity[];
   hasMore: boolean;
@@ -394,6 +436,11 @@ export interface MessageTemplate {
 
 export type SubscriptionStatus = 'Active' | 'ReadOnly' | 'Disabled' | 'NotSubscribed';
 
+export interface PlanUsage {
+  current: number;
+  max: number;
+}
+
 export interface OrganizationDetails {
   name: string;
   contactEmail?: string | null;
@@ -404,6 +451,8 @@ export interface OrganizationDetails {
   subscriptionEndDate?: string | null;
   accentColor?: string | null;
   fieldForceTrackingEnabled: boolean;
+  recordUsage: PlanUsage | null;
+  userUsage: PlanUsage | null;
 }
 
 export interface CurrentUser {
@@ -413,6 +462,107 @@ export interface CurrentUser {
   role: string;
   hasSeenTour: boolean;
   phoneNumber?: string | null;
+  // False for a Google-only account -- decides whether the delete-account form asks for a password.
+  hasPassword?: boolean;
+}
+
+// A person or company that bought (a lead that reached a Won stage) or that was added by hand.
+export interface Customer {
+  id: string;
+  name: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  source: 'WonLead' | 'Manual' | string;
+  isActive: boolean;
+  inventoryCustomerId?: string | null;
+  inventorySyncedAtUtc?: string | null;
+  createdAtUtc: string;
+  leadCount: number;
+}
+
+export interface CustomerList {
+  items: Customer[];
+  // Customers the Inventory portal doesn't have yet.
+  pendingInventory: number;
+  // Leads in a Won stage that were never turned into customers (won before customers existed).
+  wonLeadsWithoutCustomer: number;
+}
+
+export interface CustomerSaveResponse {
+  customer: Customer;
+  // True when the same person was already saved, so nothing new was created.
+  alreadyExisted: boolean;
+}
+
+export interface InventorySyncResult {
+  available: boolean;
+  pushed: number;
+  pending: number;
+  message?: string | null;
+}
+
+// A won lead that is not a customer yet (Customers screen -> "Choose leads").
+export interface WonLeadListItem {
+  id: string;
+  name: string;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  stageName: string | null;
+  wonAtUtc: string;
+}
+
+export interface WonLeadPage {
+  items: WonLeadListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface WonLeadImportResult {
+  imported: number;
+  linkedToExisting: number;
+  remaining: number;
+  inventory: InventorySyncResult;
+}
+
+// Duplicate check for a lead typed in by hand (GET /api/leads/duplicates).
+export type MatchReason = 'email' | 'phone' | 'name+company';
+
+export interface LeadMatch {
+  id: string;
+  name: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  stageName?: string | null;
+  ownerUserId?: string | null;
+  createdAtUtc: string;
+  matchedOn: MatchReason;
+}
+
+export interface CustomerMatch {
+  id: string;
+  name: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  matchedOn: MatchReason;
+}
+
+export interface DuplicateResult {
+  leads: LeadMatch[];
+  customers: CustomerMatch[];
+}
+
+// Result of linking a lead to a customer, or making a customer from a lead.
+export interface LeadCustomerResult {
+  customer: Customer | null;
+  // A new customer record was made.
+  created: boolean;
+  // The lead was linked to a customer that already existed.
+  matchedExisting: boolean;
 }
 
 export interface AuthResult {

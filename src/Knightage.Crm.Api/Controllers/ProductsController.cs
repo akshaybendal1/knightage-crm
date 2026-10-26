@@ -1,6 +1,7 @@
 using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
+using Knightage.Crm.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +25,7 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
 
-    [Authorize(Roles = "Owner,Admin")]
+    [RequireScreen("products")]
     [HttpPost]
     public async Task<IActionResult> Create(ProductRequest request)
     {
@@ -48,7 +49,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    [Authorize(Roles = "Owner,Admin")]
+    [RequireScreen("products")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, ProductRequest request)
     {
@@ -74,7 +75,7 @@ public class ProductsController : ControllerBase
         return Ok(existing);
     }
 
-    [Authorize(Roles = "Owner,Admin")]
+    [RequireScreen("products")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> SetStatus(Guid id, ProductStatusRequest request)
     {

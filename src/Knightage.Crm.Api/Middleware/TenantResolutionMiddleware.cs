@@ -7,8 +7,11 @@ namespace Knightage.Crm.Api.Middleware;
 
 /// <summary>
 /// Resolves the caller's organization once per request (from the JWT's org_id claim) and
-/// stores it on the scoped TenantContext, which every repository reads to scope its queries
-/// against the single shared CRM database. Placed after UseAuthorization() so unauthorized
+/// stores it on the scoped TenantContext, which every repository reads to scope its
+/// queries. Most tenants share one CRM database (row-level OrganizationId filtering);
+/// a tenant migrated to its own dedicated database (rare -- see knightage-platform's
+/// tenant migration feature) gets TenantContext.DatabaseName set too, which DapperContext
+/// uses to connect there instead. Placed after UseAuthorization() so unauthorized
 /// requests never reach here at all. Only runs for endpoints that actually require
 /// authorization -- the Angular app's HTTP interceptor attaches the bearer token to every
 /// request once a user is logged in, including anonymous ones like /api/client-config, so
@@ -68,12 +71,31 @@ public class TenantResolutionMiddleware
             resolvedOrganizationId = organizationId;
             authorizationHeader = context.Request.Headers.Authorization.ToString();
 
+            // GetDetailsAsync, not GetStatusAsync -- same cached Platform call either way
+            // (GetStatusAsync just extracts .Status from this), but this also needs
+            // DedicatedDatabaseName/IsMigrating below.
+            var details = await subscriptionStatusProvider.GetDetailsAsync(organizationId, authorizationHeader, context.RequestAborted);
+
+            // A tenant mid-migration is blocked entirely, reads included -- a read could
+            // otherwise observe a half-copied state. This is a short-lived window (an
+            // admin-triggered copy, not a steady-state condition), unlike the
+            // subscription-status blocks below which can persist indefinitely.
+            if (details.IsMigrating)
+            {
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                await context.Response.WriteAsJsonAsync(new { message = "Maintenance in progress for this organization. Try again shortly." });
+                return;
+            }
+
+            tenantContext.DatabaseName = details.DedicatedDatabaseName;
+            tenantContext.ServerAddress = details.DedicatedServerAddress;
+
             // Blocks writes during the post-expiry grace period and everything once that
             // grace period has also lapsed. Reads stay open in both states so a ReadOnly org
             // can still see its own data, and Active is the default whenever the status
             // lookup itself fails (see PlatformSubscriptionStatusProvider) -- an org is never
             // locked out by a Platform hiccup.
-            var status = await subscriptionStatusProvider.GetStatusAsync(organizationId, authorizationHeader, context.RequestAborted);
+            var status = details.Status;
             var blocked = !IsSubscriptionEscapeHatch(context)
                 && (status == SubscriptionStatus.Disabled
                     || (status == SubscriptionStatus.ReadOnly && MutatingMethods.Contains(context.Request.Method)));
@@ -86,6 +108,21 @@ public class TenantResolutionMiddleware
                         ? "This organization's subscription has expired. Contact your administrator to renew."
                         : "This organization's subscription is in its grace period -- viewing is available, but changes are disabled until it's renewed.",
                     subscriptionStatus = status
+                });
+                return;
+            }
+
+            // A PlatformAdmin explicitly disabling this service for the tenant (via
+            // platform's Tenants admin page) is a deliberate access decision, not a billing
+            // grace period -- block reads and writes both, same posture as the Disabled
+            // subscription case above and the IsMigrating block, not the softer ReadOnly one.
+            if (!details.ServiceEnabled && !IsSubscriptionEscapeHatch(context))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    message = "This service has been disabled for your organization. Contact your administrator.",
+                    serviceDisabled = true
                 });
                 return;
             }

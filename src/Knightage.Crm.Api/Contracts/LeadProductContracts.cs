@@ -6,4 +6,4 @@ public record AddLeadProductRequest([Required] Guid ProductId, [Range(1, 100000)
 
 public record UpdateLeadProductQuantityRequest([Range(1, 100000)] int Quantity);
 
-public record UpdateLeadProductStageRequest([Required] Guid ProductStageId);
+public record UpdateLeadProductStageRequest([Required] Guid ProductStageId, [MaxLength(StageMoveLimits.MaxNoteLength)] string? Note = null);

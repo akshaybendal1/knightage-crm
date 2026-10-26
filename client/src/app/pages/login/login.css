@@ -77,3 +77,16 @@
   display: flex;
   justify-content: center;
 }
+
+.login-legal {
+  text-align: center;
+  margin-top: 24px;
+  margin-bottom: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.login-legal a {
+  color: var(--text-muted);
+  text-decoration: underline;
+}

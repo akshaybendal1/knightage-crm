@@ -22,3 +22,6 @@ publish_output/
 .deploy-work/
 *.bak
 **/PublishProfiles/*.pubxml.user
+
+# Firebase client config: keep out of git (copy it into client/android/app before an Android build)
+google-services.json

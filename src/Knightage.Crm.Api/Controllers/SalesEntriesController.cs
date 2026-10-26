@@ -2,6 +2,7 @@ using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
 using Knightage.Crm.Core.Tenancy;
+using Knightage.Crm.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,9 @@ public class SalesEntriesController : ControllerBase
     private readonly IIdentityUserDirectory _identityUserDirectory;
     private readonly ISubscriptionStatusProvider _subscriptionStatusProvider;
     private readonly TenantContext _tenantContext;
+    private readonly ICustomerRepository _customerRepository;
+    private readonly ICustomerService _customerService;
+    private readonly ILogger<SalesEntriesController> _logger;
 
     public SalesEntriesController(
         ILeadRepository leadRepository,
@@ -37,7 +41,10 @@ public class SalesEntriesController : ControllerBase
         ILeadProductRepository leadProductRepository,
         IIdentityUserDirectory identityUserDirectory,
         ISubscriptionStatusProvider subscriptionStatusProvider,
-        TenantContext tenantContext)
+        TenantContext tenantContext,
+        ICustomerRepository customerRepository,
+        ICustomerService customerService,
+        ILogger<SalesEntriesController> logger)
     {
         _leadRepository = leadRepository;
         _activityRepository = activityRepository;
@@ -48,6 +55,9 @@ public class SalesEntriesController : ControllerBase
         _identityUserDirectory = identityUserDirectory;
         _subscriptionStatusProvider = subscriptionStatusProvider;
         _tenantContext = tenantContext;
+        _customerRepository = customerRepository;
+        _customerService = customerService;
+        _logger = logger;
     }
 
     private async Task<bool> IsFeatureEnabledAsync(CancellationToken cancellationToken)
@@ -68,6 +78,14 @@ public class SalesEntriesController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "Field Force Tracking isn't enabled for this organization." });
         }
 
+        // A sales entry is a Lead under the hood, so it counts toward the same plan
+        // record limit as LeadsController.Create -- one combined number.
+        var details = await _subscriptionStatusProvider.GetDetailsAsync(_tenantContext.RequireOrganizationId(), Request.Headers.Authorization.ToString(), cancellationToken);
+        if (details.PlanMaxRecords is int maxRecords && await _leadRepository.CountActiveAsync() >= maxRecords)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = $"This organization is at its plan's limit of {maxRecords} records. Ask your admin to upgrade the plan to add more." });
+        }
+
         var stages = await _stageRepository.GetActiveAsync();
         // IsDefault wins when an admin has set it; IsWon is the fallback so an org that
         // configured this before IsDefault existed keeps working unchanged.
@@ -75,7 +93,7 @@ public class SalesEntriesController : ControllerBase
             ?? stages.Where(s => s.IsWon).OrderBy(s => s.SortOrder).FirstOrDefault();
         if (targetStage is null)
         {
-            return BadRequest(new { message = "No pipeline stage is marked as Default (or Won) yet. Ask your admin to mark one on the Pipeline Stages page before logging sales entries." });
+            return BadRequest(new { message = "No pipeline stage is marked as Default (or Won) yet. Ask your admin to mark one on the Pipeline and Product Stages page before logging sales entries." });
         }
 
         var productStages = await _productStageRepository.GetActiveAsync();
@@ -102,15 +120,25 @@ public class SalesEntriesController : ControllerBase
             }
         }
 
+        Customer? customer = null;
+        if (request.CustomerId is Guid customerId)
+        {
+            customer = await _customerRepository.GetByIdAsync(customerId);
+            if (customer is null || !customer.IsActive)
+            {
+                return BadRequest(new { message = "That customer no longer exists. Pick another customer." });
+            }
+        }
+
         var currentUserId = User.FindFirst("sub")?.Value;
         var now = DateTime.UtcNow;
         var lead = new Lead
         {
             Id = Guid.NewGuid(),
-            Name = request.CustomerName,
-            Company = request.Company,
-            Email = request.Email,
-            Phone = request.Phone,
+            Name = customer?.Name ?? request.CustomerName,
+            Company = customer is null ? request.Company : customer.Company,
+            Email = customer is null ? request.Email : customer.Email,
+            Phone = customer is null ? request.Phone : customer.Phone,
             PipelineStageId = targetStage.Id,
             Notes = request.Notes,
             Source = "FieldSales",
@@ -153,6 +181,23 @@ public class SalesEntriesController : ControllerBase
             CreatedAtUtc = now,
         });
 
+        if (customer is not null)
+        {
+            try
+            {
+                await _customerRepository.LinkLeadAsync(lead.Id, customer.Id);
+            }
+            catch (Exception ex)
+            {
+                // The entry is saved; failing the request now would make the rep log it twice.
+                _logger.LogError(ex, "Could not link sales entry {LeadId} to customer {CustomerId}.", lead.Id, customer.Id);
+            }
+        }
+        else if (targetStage.IsWon)
+        {
+            await _customerService.ConvertWonLeadsAsync(new[] { lead }, currentUserId, Request.Headers.Authorization.ToString(), cancellationToken);
+        }
+
         return StatusCode(StatusCodes.Status201Created, lead);
     }
 
@@ -172,7 +217,7 @@ public class SalesEntriesController : ControllerBase
         return Ok(new { items, totalCount });
     }
 
-    [Authorize(Roles = "Owner,Admin")]
+    [RequireScreen("sales-coverage")]
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? ownerUserId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
     {
@@ -203,7 +248,7 @@ public class SalesEntriesController : ControllerBase
     // single rep's sales-entry locations within a date range, unpaged. The caller
     // already knows the rep's display name (from the org's user list it fetched for
     // the rep dropdown), so there's no identity lookup here.
-    [Authorize(Roles = "Owner,Admin")]
+    [RequireScreen("sales-coverage")]
     [HttpGet("coverage")]
     public async Task<IActionResult> GetCoverage([FromQuery] string ownerUserId, [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken cancellationToken)
     {
@@ -231,7 +276,7 @@ public class SalesEntriesController : ControllerBase
     // Backs the Sales Dashboard's "Sales by rep" chart -- org-wide per-rep totals,
     // reusing ReportsController's range-resolution convention (week/month/all/custom)
     // since it's internal static and explicitly documented as shared across controllers.
-    [Authorize(Roles = "Owner,Admin")]
+    [RequireScreen("sales-coverage")]
     [HttpGet("by-rep")]
     public async Task<IActionResult> GetByRep([FromQuery] string range = "week", [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null, CancellationToken cancellationToken = default)
     {

@@ -52,13 +52,18 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("calendar")]
-    public async Task<IActionResult> GetCalendarTasks([FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] bool all = false)
+    public async Task<IActionResult> GetCalendarTasks([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] bool all = false)
     {
+        if (from is null || to is null || to < from || (to.Value - from.Value).TotalDays > 400)
+        {
+            return BadRequest(new { message = "Give a from and to date, with to on or after from and at most 400 days apart." });
+        }
+
         // Same "all" semantics/no-role-gate as GetTasks above -- frontend gates the
         // whole-team toggle to Owner/Admin, consistent with the rest of this API.
         if (all)
         {
-            var allItems = await _taskRepository.GetByDateRangeAsync(null, from.Date, to.Date);
+            var allItems = await _taskRepository.GetByDateRangeAsync(null, from.Value.Date, to.Value.Date);
             return Ok(allItems);
         }
 
@@ -68,7 +73,7 @@ public class TasksController : ControllerBase
             return Unauthorized();
         }
 
-        var items = await _taskRepository.GetByDateRangeAsync(currentUserId, from.Date, to.Date);
+        var items = await _taskRepository.GetByDateRangeAsync(currentUserId, from.Value.Date, to.Value.Date);
         return Ok(items);
     }
 

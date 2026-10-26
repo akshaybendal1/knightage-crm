@@ -46,6 +46,7 @@
               {{ task.title }}
             </button>
           }
+          <button type="button" class="calendar-day-more" (click)="toggleExpand(day)">Show less</button>
         } @else if (tasksForDay(day).length > 3) {
           <button type="button" class="calendar-day-more" (click)="toggleExpand(day)">+{{ tasksForDay(day).length - 3 }} more</button>
         }

@@ -15,54 +15,115 @@
               <p class="form-control-plaintext mb-0 owner-value">{{ auth.currentUser()?.displayName }}</p>
             </div>
             <div class="form-group mb-3">
-              <label class="form-label" for="customerName">Customer name</label>
-              <input id="customerName" name="customerName" type="text" class="form-control" [(ngModel)]="customerName" required />
-            </div>
-            <div class="form-group mb-3">
-              <label class="form-label" for="company">Customer organization <span class="text-muted">(optional)</span></label>
-              <input id="company" name="company" type="text" class="form-control" [(ngModel)]="company" />
-            </div>
-            <div class="row">
-              <div class="col-sm-6">
-                <div class="form-group mb-3">
-                  <label class="form-label" for="email">Customer email <span class="text-muted">(optional)</span></label>
-                  <input id="email" name="email" type="email" class="form-control" [(ngModel)]="email" />
+              <label class="form-label" for="customerSearch">Customer</label>
+              @if (selectedCustomer(); as customer) {
+                <div class="selected-customer d-flex align-items-center justify-content-between gap-2">
+                  <span>
+                    <strong>{{ customer.name }}</strong>
+                    @if (customer.company) { <span class="text-muted"> &middot; {{ customer.company }}</span> }
+                  </span>
+                  <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearCustomer()">Change</button>
                 </div>
-              </div>
-              <div class="col-sm-6">
-                <div class="form-group mb-3">
-                  <label class="form-label" for="phone">Customer phone <span class="text-muted">(optional)</span></label>
-                  <input id="phone" name="phone" type="tel" class="form-control" [(ngModel)]="phone" />
+                <p class="customer-details text-muted small mb-0 mt-2">
+                  @if (customer.company) {
+                    <span>{{ customer.company }}</span>
+                  }
+                  @if (customer.email) {
+                    <span>{{ customer.email }}</span>
+                  }
+                  @if (customer.phone) {
+                    <span>{{ customer.phone }}</span>
+                  }
+                  @if (!customer.company && !customer.email && !customer.phone) {
+                    <span>No other details saved for this customer.</span>
+                  }
+                </p>
+              } @else if (showNewCustomerForm) {
+                <div class="new-customer-form mt-2">
+                  <div class="row g-2">
+                    <div class="col-12">
+                      <input type="text" class="form-control form-control-sm" placeholder="Customer name" maxlength="200" [(ngModel)]="newCustomerName" name="newCustomerName" />
+                    </div>
+                    <div class="col-12">
+                      <input type="text" class="form-control form-control-sm" placeholder="Organization (optional)" maxlength="200" [(ngModel)]="newCustomerCompany" name="newCustomerCompany" />
+                    </div>
+                    <div class="col-sm-6">
+                      <input type="email" class="form-control form-control-sm" placeholder="Email (optional)" maxlength="320" [(ngModel)]="newCustomerEmail" name="newCustomerEmail" />
+                    </div>
+                    <div class="col-sm-6">
+                      <input type="tel" class="form-control form-control-sm" placeholder="Phone (optional)" maxlength="50" [(ngModel)]="newCustomerPhone" name="newCustomerPhone" />
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingNewCustomer() || !newCustomerName.trim()" (click)="createCustomerInline()">
+                      {{ savingNewCustomer() ? 'Adding...' : 'Add' }}
+                    </button>
+                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelNewCustomer()">Cancel</button>
+                  </div>
                 </div>
-              </div>
+              } @else {
+                <div class="customer-picker">
+                  <input
+                    id="customerSearch"
+                    name="customerSearch"
+                    type="search"
+                    autocomplete="off"
+                    class="form-control"
+                    placeholder="Search customers by name, company, email or phone"
+                    [(ngModel)]="customerQuery"
+                    (focus)="onCustomerFocus()"
+                    (input)="onCustomerQueryChange()"
+                    (blur)="onCustomerBlur()"
+                  />
+                  @if (showCustomerResults()) {
+                    <ul class="customer-results">
+                      @for (c of customerResults(); track c.id) {
+                        <li>
+                          <button type="button" class="customer-result" (mousedown)="pickCustomer(c)">
+                            <span class="fw-semibold">{{ c.name }}</span>
+                            <span class="text-muted small">{{ customerDetail(c) }}</span>
+                          </button>
+                        </li>
+                      } @empty {
+                        <li class="customer-none text-muted small">No customer found.</li>
+                      }
+                      <li>
+                        <button type="button" class="customer-result customer-add" (mousedown)="startNewCustomer()">+ Add new customer&hellip;</button>
+                      </li>
+                    </ul>
+                  }
+                </div>
+              }
             </div>
 
             <label class="form-label">Products</label>
             <div class="card card-round mb-3">
               <div class="card-body">
                 @if (lines().length > 0) {
-                  <table class="table table-sm mb-3">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Quantity</th>
-                        <th>Stage</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (line of lines(); track $index) {
+                  <div class="table-responsive">
+                    <table class="table table-sm table-card-mobile mb-3">
+                      <thead>
                         <tr>
-                          <td>{{ line.productName }}</td>
-                          <td>{{ line.quantity }}</td>
-                          <td>{{ line.productStageName }}</td>
-                          <td>
-                            <button type="button" class="btn btn-label-danger btn-sm" (click)="removeLine($index)">Remove</button>
-                          </td>
+                          <th>Product</th>
+                          <th>Quantity</th>
+                          <th>Stage</th>
+                          <th></th>
                         </tr>
-                      }
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        @for (line of lines(); track $index) {
+                          <tr>
+                            <td data-label="Product">{{ line.productName }}</td>
+                            <td data-label="Quantity">{{ line.quantity }}</td>
+                            <td data-label="Stage">{{ line.productStageName }}</td>
+                            <td>
+                              <button type="button" class="btn btn-label-danger btn-sm" (click)="removeLine($index)">Remove</button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 }
                 <div class="d-flex gap-2 flex-wrap align-items-start">
                   <select class="form-select" style="max-width: 220px;" name="newProductId" [(ngModel)]="newProductId">

@@ -2,15 +2,17 @@ using System.Text.Json;
 using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
+using Knightage.Crm.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Knightage.Crm.Api.Controllers;
 
-// [Authorize(Roles = "Owner,Admin")] at class level, matching ReportsController itself
-// (the parent feature) -- Reports as a whole is already fully admin-gated, unlike
-// MessageTemplatesController's per-action layering.
-[Authorize(Roles = "Owner,Admin")]
+// [RequireScreen("reports")] at class level, matching ReportsController itself (the parent
+// feature): Reports as a whole follows the "reports" screen setting in Access Control (Owner/Admin
+// by default), unlike MessageTemplatesController's per-action layering.
+[Authorize]
+[RequireScreen("reports")]
 [ApiController]
 [Route("api/custom-reports")]
 public class CustomReportsController : ControllerBase

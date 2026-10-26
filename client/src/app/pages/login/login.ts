@@ -36,7 +36,7 @@ export class Login implements OnInit, AfterViewInit {
   // this renders a plain button that goes through the native Credential Manager flow
   // instead of the GSI script/button used on web.
   readonly isNative = Capacitor.isNativePlatform();
-  private googleNativeInitialized = false;
+  private googleNativeInit: Promise<void> | null = null;
 
   constructor(
     private readonly auth: Auth,
@@ -60,13 +60,10 @@ export class Login implements OnInit, AfterViewInit {
       // OAuth client registered in Google Cloud Console (package name + SHA-1) never
       // appears in app code; it just has to exist for Credential Manager to authorize
       // this app.
-      SocialLogin.initialize({ google: { webClientId: this.googleClientId } })
-        .then(() => {
-          this.googleNativeInitialized = true;
-        })
-        .catch(() => {
-          // No Google button rather than a broken page.
-        });
+      this.googleNativeInit = SocialLogin.initialize({ google: { webClientId: this.googleClientId } });
+      this.googleNativeInit.catch(() => {
+        // Reported when the button is tapped, not here -- nothing to show until then.
+      });
       return;
     }
 
@@ -116,7 +113,7 @@ export class Login implements OnInit, AfterViewInit {
 
     request.subscribe({
       next: () => {
-        this.loading.set(false);
+        // Stays 'loading' until the next page replaces this one, so the button doesn't re-enable in between.
         this.router.navigateByUrl('/dashboard');
       },
       error: (err) => {
@@ -127,20 +124,23 @@ export class Login implements OnInit, AfterViewInit {
   }
 
   async signInWithGoogleNative(): Promise<void> {
-    if (!this.googleNativeInitialized) {
-      return;
-    }
     this.errorMessage.set(null);
     try {
-      const { result } = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+      await this.googleNativeInit;
+      // No `scopes`: the plugin already requests email/profile/openid, and any scopes array makes it reject unless MainActivity is modified.
+      const { result } = await SocialLogin.login({ provider: 'google', options: {} });
       const idToken = (result as { idToken?: string | null } | undefined)?.idToken;
       if (!idToken) {
         this.errorMessage.set('Could not sign in with Google.');
         return;
       }
       this.onGoogleCredential(idToken);
-    } catch {
-      // User cancelled the native sign-in sheet, or it failed -- leave the form as-is.
+    } catch (err) {
+      if ((err as { code?: string } | null)?.code === 'USER_CANCELLED') {
+        return;
+      }
+      console.error('Native Google sign-in failed', err);
+      this.errorMessage.set("Google sign-in isn't available right now. Sign in with your email and password, or try again later.");
     }
   }
 
@@ -150,7 +150,7 @@ export class Login implements OnInit, AfterViewInit {
 
     this.auth.googleSignIn(idToken).subscribe({
       next: () => {
-        this.loading.set(false);
+        // Stays 'loading' until the next page replaces this one, so the button doesn't re-enable in between.
         this.router.navigateByUrl('/dashboard');
       },
       error: (err) => {
@@ -176,7 +176,7 @@ export class Login implements OnInit, AfterViewInit {
 
     this.auth.googleSignIn(idToken, this.organizationName).subscribe({
       next: () => {
-        this.loading.set(false);
+        // Stays 'loading' until the next page replaces this one, so the button doesn't re-enable in between.
         this.router.navigateByUrl('/dashboard');
       },
       error: (err) => {

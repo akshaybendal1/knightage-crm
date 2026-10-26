@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /about
+Allow: /login
+Allow: /privacy-policy
+Allow: /terms-of-service
+Disallow: /
+
+Sitemap: https://crm.knightagetech.com/sitemap.xml

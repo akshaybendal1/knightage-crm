@@ -86,3 +86,39 @@
 .task-item > .task-item-actions {
   flex: 0 0 auto;
 }
+
+/* "{unit price} each ·" and "Line total {amount}" wrap as units, never mid-phrase. */
+.nowrap-part {
+  white-space: nowrap;
+}
+
+/* Phone widths: a product row is checkbox + name/price + stage select + quantity + Remove.
+   Side by side, the controls (~260px) leave the name a sliver of a column, so it wrapped a few
+   characters per line. Let the row wrap instead: the checkbox and name/price share the first
+   line and the controls get a full-width line of their own beneath. Opt-in via .task-item-stack;
+   at 576px and up the row is untouched. */
+@media (max-width: 575.98px) {
+  .task-item.task-item-stack {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  /* Basis 0, not auto: with wrapping on, an auto basis is the text's whole one-line width,
+     which would push the name onto its own line below the checkbox. */
+  .task-item.task-item-stack > div:not(.task-item-actions) {
+    flex: 1 1 0;
+  }
+
+  .task-item.task-item-stack > .task-item-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Takes the leftover width beside the quantity and Remove; only drops Remove to a second
+     line on very narrow (~320px) screens. */
+  .task-item-stack .lead-product-status {
+    flex: 1 1 100px;
+    width: auto;
+    min-width: 0;
+  }
+}

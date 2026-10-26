@@ -1,0 +1,111 @@
+<div class="guide-page">
+  <!-- signed in, the app's own header and sidebar are already around this page -->
+  @if (!signedIn()) {
+  <header class="guide-top">
+    <a routerLink="/about" class="wordmark" aria-label="About {{ guide.appName }}">
+      <span class="wordmark-primary">Knightage</span><span class="wordmark-accent">{{ guide.product }}</span>
+    </a>
+    <nav class="guide-top-links">
+      <a routerLink="/about">About</a>
+      <a routerLink="/login" class="btn btn-primary btn-sm">Sign in</a>
+    </nav>
+  </header>
+  }
+
+  <section class="guide-hero">
+    <p class="eyebrow">USER GUIDE</p>
+    <h1>{{ guide.title }}</h1>
+    <p class="lead-text">{{ guide.intro }}</p>
+    <label class="guide-search">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input type="search" placeholder="Search the guide, e.g. {{ guide.searchExample }}" aria-label="Search the guide"
+             [ngModel]="query()" (ngModelChange)="query.set($event)" />
+    </label>
+  </section>
+
+  <div class="guide-body">
+    <aside class="guide-toc" aria-label="Contents">
+      <p class="toc-title">Contents</p>
+      <a class="toc-link" (click)="jumpTo('quick-start')" href="javascript:void(0)">Quick start</a>
+      @for (section of sections(); track section.id) {
+        <a class="toc-link" (click)="jumpTo(section.id)" href="javascript:void(0)">{{ section.title }}</a>
+      }
+      <a class="toc-link" (click)="jumpTo('faq')" href="javascript:void(0)">Questions</a>
+    </aside>
+
+    <!-- phones and tablets: the contents become a dropdown -->
+    <label class="guide-toc-select">
+      <span>Jump to</span>
+      <select class="form-select" #jump (change)="jumpTo(jump.value); jump.value = ''">
+        <option value="">Choose a topic…</option>
+        <option value="quick-start">Quick start</option>
+        @for (section of sections(); track section.id) {
+          <option [value]="section.id">{{ section.title }}</option>
+        }
+        <option value="faq">Questions</option>
+      </select>
+    </label>
+
+    <main class="guide-main">
+      @if (!query()) {
+        <section class="guide-card quick-start" id="quick-start">
+          <h2><i class="fas fa-rocket" aria-hidden="true"></i> Quick start</h2>
+          <ol class="steps">
+            @for (step of guide.quickStart; track $index) {
+              <li [innerHTML]="step"></li>
+            }
+          </ol>
+        </section>
+      }
+
+      @for (section of sections(); track section.id) {
+        <section class="guide-card" [id]="section.id">
+          <h2><i class="fas {{ section.icon }}" aria-hidden="true"></i> {{ section.title }}</h2>
+          @if (section.where) {
+            <p class="where"><i class="fas fa-map-signs" aria-hidden="true"></i> {{ section.where }}</p>
+          }
+          <p [innerHTML]="section.summary"></p>
+          @if (section.steps?.length) {
+            <ol class="steps">
+              @for (step of section.steps; track $index) {
+                <li [innerHTML]="step"></li>
+              }
+            </ol>
+          }
+          @if (section.tips?.length) {
+            <div class="tips">
+              @for (tip of section.tips; track $index) {
+                <p><i class="fas fa-lightbulb" aria-hidden="true"></i> <span [innerHTML]="tip"></span></p>
+              }
+            </div>
+          }
+          @if (section.roles) {
+            <p class="roles"><i class="fas fa-user-shield" aria-hidden="true"></i> {{ section.roles }}</p>
+          }
+        </section>
+      } @empty {
+        <section class="guide-card">
+          <p class="mb-0">Nothing in the guide matches “{{ query() }}”. Try another word, or
+            <a href="javascript:void(0)" (click)="query.set('')">show everything</a>.</p>
+        </section>
+      }
+
+      @if (!query()) {
+        <section class="guide-card" id="faq">
+          <h2><i class="fas fa-question-circle" aria-hidden="true"></i> Questions</h2>
+          @for (item of guide.faqs; track $index) {
+            <details class="faq">
+              <summary>{{ item.q }}</summary>
+              <p [innerHTML]="item.a"></p>
+            </details>
+          }
+        </section>
+      }
+
+      <p class="guide-footer">
+        Still stuck? Email <a href="mailto:contact@knightagetech.com">contact&#64;knightagetech.com</a>.
+        <a routerLink="/privacy-policy">Privacy Policy</a> · <a routerLink="/terms-of-service">Terms of Service</a>
+      </p>
+    </main>
+  </div>
+</div>

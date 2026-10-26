@@ -1,4 +1,4 @@
-<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4" data-tour="page-header">
   <div>
     <h3 class="fw-bold mb-0">Timeline</h3>
   </div>
@@ -8,10 +8,42 @@
   <div class="alert alert-danger">{{ errorMessage() }}</div>
 }
 
-<div class="range-toggle mb-3">
-  <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'leads'" [class.btn-label-light]="view() !== 'leads'" (click)="setView('leads')">Leads</button>
-  <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'products'" [class.btn-label-light]="view() !== 'products'" (click)="setView('products')">Lead Products</button>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div class="range-toggle">
+    <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'leads'" [class.btn-label-light]="view() !== 'leads'" (click)="setView('leads')">Leads</button>
+    <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'products'" [class.btn-label-light]="view() !== 'products'" (click)="setView('products')">Lead Products</button>
+  </div>
+  <button type="button" class="btn btn-sm" [class.btn-primary]="selectMode()" [class.btn-label-secondary]="!selectMode()" [attr.aria-pressed]="selectMode()" (click)="toggleSelectMode()">
+    {{ selectMode() ? 'Done selecting' : 'Select multiple' }}
+  </button>
 </div>
+
+@if (selectMode()) {
+  <div class="card card-round mb-3 timeline-bulk-bar">
+    <div class="card-body d-flex flex-wrap align-items-center gap-2">
+      <span class="fw-semibold">{{ selectedCount() }} selected</span>
+      @if (view() === 'leads') {
+        <select class="form-select form-select-sm timeline-bulk-stage" aria-label="Move selected leads to stage" [(ngModel)]="bulkLeadStageId" name="bulkLeadStageId">
+          <option value="">Move to stage&hellip;</option>
+          @for (column of leadColumns(); track column.stage.id) {
+            <option [value]="column.stage.id">{{ column.stage.name }}</option>
+          }
+        </select>
+        <button type="button" class="btn btn-primary btn-sm" [disabled]="selectedCount() === 0 || !bulkLeadStageId" (click)="startBulkMove()">Move selected</button>
+      } @else {
+        <select class="form-select form-select-sm timeline-bulk-stage" aria-label="Move selected products to stage" [(ngModel)]="bulkProductStageId" name="bulkProductStageId">
+          <option value="">Move to stage&hellip;</option>
+          @for (column of productColumns(); track column.stage.id) {
+            <option [value]="column.stage.id">{{ column.stage.name }}</option>
+          }
+        </select>
+        <button type="button" class="btn btn-primary btn-sm" [disabled]="selectedCount() === 0 || !bulkProductStageId" (click)="startBulkMove()">Move selected</button>
+      }
+      <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="selectedCount() === 0" (click)="clearSelection()">Clear</button>
+      <span class="text-muted small">Tick cards (or a column's checkbox), choose a stage, then Move selected. Dragging is paused while selecting.</span>
+    </div>
+  </div>
+}
 
 <div class="row mb-3">
   <div class="col-md-4">
@@ -63,8 +95,11 @@
       @for (column of leadColumns(); track column.stage.id) {
         <div class="timeline-column">
           <div class="timeline-column-header">
+            @if (selectMode()) {
+              <input type="checkbox" class="form-check-input me-2" [checked]="leadColumnAllSelected(column)" (change)="toggleLeadColumn(column)" [attr.aria-label]="'Select all leads in ' + column.stage.name" />
+            }
             <span class="timeline-column-title">{{ column.stage.name }}</span>
-            <span class="badge badge-secondary">{{ column.totalCount }}</span>
+            <span class="badge badge-secondary ms-auto">{{ column.totalCount }}</span>
           </div>
           <div
             class="timeline-column-body"
@@ -73,7 +108,10 @@
             (cdkDropListDropped)="onLeadDrop($event, column)"
           >
             @for (item of column.items; track item.leadId) {
-              <div class="timeline-card" cdkDrag>
+              <div class="timeline-card" [class.selecting]="selectMode()" [class.selected]="isLeadSelected(item.leadId)" cdkDrag [cdkDragDisabled]="selectMode()">
+                @if (selectMode()) {
+                  <input type="checkbox" class="form-check-input timeline-card-select" [checked]="isLeadSelected(item.leadId)" (change)="toggleLeadSelected(item)" [attr.aria-label]="'Select ' + item.leadName" />
+                }
                 <a class="timeline-card-link" [routerLink]="['/leads', item.leadId]">
                   <div class="timeline-card-name">{{ item.leadName }}</div>
                   @if (item.company) {
@@ -109,8 +147,11 @@
       @for (column of productColumns(); track column.stage.id) {
         <div class="timeline-column">
           <div class="timeline-column-header">
+            @if (selectMode()) {
+              <input type="checkbox" class="form-check-input me-2" [checked]="productColumnAllSelected(column)" (change)="toggleProductColumn(column)" [attr.aria-label]="'Select all products in ' + column.stage.name" />
+            }
             <span class="timeline-column-title">{{ column.stage.name }}</span>
-            <span class="badge badge-secondary">{{ column.totalCount }}</span>
+            <span class="badge badge-secondary ms-auto">{{ column.totalCount }}</span>
           </div>
           <div
             class="timeline-column-body"
@@ -119,7 +160,10 @@
             (cdkDropListDropped)="onProductDrop($event, column)"
           >
             @for (item of column.items; track item.leadProductId) {
-              <div class="timeline-card" cdkDrag>
+              <div class="timeline-card" [class.selecting]="selectMode()" [class.selected]="isProductSelected(item.leadProductId)" cdkDrag [cdkDragDisabled]="selectMode()">
+                @if (selectMode()) {
+                  <input type="checkbox" class="form-check-input timeline-card-select" [checked]="isProductSelected(item.leadProductId)" (change)="toggleProductSelected(item)" [attr.aria-label]="'Select ' + (item.productName || 'product') + ' for ' + item.leadName" />
+                }
                 <a class="timeline-card-link" [routerLink]="['/leads', item.leadId]">
                   <div class="timeline-card-name">{{ item.leadName }}</div>
                   @if (item.company) {
@@ -152,3 +196,13 @@
     </div>
   }
 }
+
+<app-stage-move-dialog
+  [open]="moveDialog() !== null"
+  [noun]="moveDialog()?.noun ?? 'lead'"
+  [stageName]="moveDialog()?.stageName ?? ''"
+  [items]="moveDialog()?.items ?? []"
+  [busy]="movingBusy()"
+  (confirmed)="moveDialog()?.onConfirm($event)"
+  (closed)="moveDialog()?.onCancel()"
+/>

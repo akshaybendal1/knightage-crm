@@ -22,15 +22,18 @@ export interface TourStepDef {
   requiresLead?: boolean;
   /** Only shown to the Sales role -- see buildTourSteps, which short-circuits to
    * ONLY these steps for a Sales user, since every other step targets a page
-   * non-sales-guard blocks them from reaching at all. */
+   * the screen guard blocks them from reaching at all. */
   salesOnly?: boolean;
   /** Only included when the org has Field Force Tracking enabled (Owner/Admin steps). */
   requiresFieldSales?: boolean;
+  /** Access Control screen key this step opens; skipped when the user's role can't open that screen. */
+  screen?: string;
 }
 
 const TOUR_STEPS: TourStepDef[] = [
   {
     route: '/dashboard',
+    screen: 'dashboard',
     element: '[data-tour="pipeline-overview"]',
     title: 'Welcome to Knightage CRM',
     description: 'Your dashboard tracks pipeline, wins/losses and overdue tasks at a glance.',
@@ -39,6 +42,7 @@ const TOUR_STEPS: TourStepDef[] = [
   {
     route: null,
     navKey: 'nav-leads',
+    screen: 'leads',
     element: '',
     title: 'Leads',
     description: 'Every lead your team is working lives here.',
@@ -46,6 +50,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/leads',
+    screen: 'leads',
     element: '[data-tour="new-lead-button"]',
     title: 'Add a lead',
     description: 'Add one lead here, or bulk-import a CSV further down the page.',
@@ -53,6 +58,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/leads',
+    screen: 'leads',
     element: '[data-tour="bulk-whatsapp-button"]',
     title: 'Bulk WhatsApp',
     description: 'Select leads with the checkboxes, then message them all at once.',
@@ -60,6 +66,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/leads/:id',
+    screen: 'leads',
     element: '[data-tour="lead-timeline"]',
     title: 'Lead activity',
     description: 'Notes, tasks and stage changes for this lead, all in one timeline.',
@@ -67,14 +74,32 @@ const TOUR_STEPS: TourStepDef[] = [
     requiresLead: true,
   },
   {
+    route: '/customers',
+    screen: 'customers',
+    element: '[data-tour="page-header"]',
+    title: 'Customers',
+    description: 'A lead moved to a Won stage becomes a customer here. Convert older won leads in one go with Choose leads or Convert all — and, with Knightage Inventory, customers are shared both ways.',
+    side: 'bottom',
+  },
+  {
     route: '/pipeline-stages',
+    screen: 'pipeline-stages',
     element: '[data-tour="new-stage-button"]',
     title: 'Pipeline stages',
     description: 'Define the stages leads move through, and mark which ones count as won or lost.',
     side: 'left',
   },
   {
+    route: '/timeline',
+    screen: 'timeline',
+    element: '[data-tour="page-header"]',
+    title: 'Timeline board',
+    description: 'Your pipeline as columns — drag a lead or a product line to its next stage, or select several and Move selected.',
+    side: 'bottom',
+  },
+  {
     route: '/tasks',
+    screen: 'tasks',
     element: '[data-tour="page-header"]',
     title: 'Tasks',
     description: 'Everything assigned to you, due today or overdue.',
@@ -82,6 +107,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/calendar',
+    screen: 'calendar',
     element: '[data-tour="page-header"]',
     title: 'Calendar',
     description: 'The same tasks, laid out by due date.',
@@ -89,6 +115,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/reports',
+    screen: 'reports',
     element: '[data-tour="page-header"]',
     title: 'Reports',
     description:
@@ -98,6 +125,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/reports',
+    screen: 'reports',
     element: '[data-tour="custom-report-button"]',
     title: 'Custom reports',
     description:
@@ -107,6 +135,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/team',
+    screen: 'team',
     element: '[data-tour="add-teammate-button"]',
     title: 'Team',
     description: 'Invite teammates and manage their roles.',
@@ -114,7 +143,17 @@ const TOUR_STEPS: TourStepDef[] = [
     adminOnly: true,
   },
   {
+    route: '/access-control',
+    screen: 'access-control',
+    element: '[data-tour="page-header"]',
+    title: 'Access control',
+    description: 'Choose which screens Admins, Members and Sales reps can open.',
+    side: 'bottom',
+    adminOnly: true,
+  },
+  {
     route: '/products',
+    screen: 'products',
     element: '[data-tour="new-product-button"]',
     title: 'Products',
     description: 'Manage what you sell here, then optionally link a lead to one when you create or edit it.',
@@ -123,6 +162,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/message-templates',
+    screen: 'message-templates',
     element: '[data-tour="new-template-button"]',
     title: 'Message templates',
     description: 'Reusable WhatsApp message templates for bulk sends.',
@@ -131,6 +171,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/sales-dashboard',
+    screen: 'sales-dashboard',
     element: '[data-tour="page-header"]',
     title: 'Sales Dashboard',
     description: "Every rep's field sales entries, plus a rep-by-rep comparison chart.",
@@ -140,6 +181,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/sales-coverage',
+    screen: 'sales-coverage',
     element: '[data-tour="page-header"]',
     title: 'Sales Coverage',
     description: 'See the ground each rep has covered on a map, with a computed coverage area by day, week or month.',
@@ -149,6 +191,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/organization',
+    screen: 'organization',
     element: '[data-tour="page-header"]',
     title: 'Organization',
     description: 'Your org profile and subscription status.',
@@ -157,13 +200,22 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/contact-us',
+    screen: 'contact-us',
     element: '[data-tour="page-header"]',
+    title: 'Need help?',
+    description: 'Reach us here any time.',
+    side: 'bottom',
+  },
+  {
+    route: '/user-guide',
+    element: '.guide-hero',
     title: "You're all set",
-    description: 'Reach us here any time you need help.',
+    description: 'The user guide explains every screen step by step — open it any time from Help → User Guide, and replay this tour with the ? button at the top.',
     side: 'bottom',
   },
   {
     route: '/sales-entry',
+    screen: 'sales-entry',
     element: '[data-tour="page-header"]',
     title: 'Add Sales Entry',
     description: "Log a visit here — customer details and products, plus your device's location, are captured automatically when you submit.",
@@ -172,6 +224,7 @@ const TOUR_STEPS: TourStepDef[] = [
   },
   {
     route: '/sales-dashboard',
+    screen: 'sales-dashboard',
     element: '[data-tour="page-header"]',
     title: 'Sales Dashboard',
     description: 'Your own logged entries and their total value, all in one place.',
@@ -184,14 +237,17 @@ export interface TourContext {
   role: string | undefined;
   firstLeadId: string | null;
   fieldForceTrackingEnabled: boolean;
+  /** Screens the user's role may open (Access Control). */
+  screens: ReadonlySet<string>;
 }
 
 export function buildTourSteps(ctx: TourContext): TourStepDef[] {
-  // A Sales user can't reach any of the general steps below -- non-sales-guard blocks
+  // A Sales user can't reach any of the general steps below -- the screen guard blocks
   // every one of those routes -- so their tour is a short, separate mini-tour instead
   // of a filtered version of the general one.
+  const canOpen = (s: TourStepDef) => !s.screen || ctx.screens.has(s.screen);
   if (ctx.role === 'Sales') {
-    return TOUR_STEPS.filter((s) => s.salesOnly);
+    return TOUR_STEPS.filter((s) => s.salesOnly).filter(canOpen);
   }
 
   const isAdmin = ctx.role === 'Owner' || ctx.role === 'Admin';
@@ -199,5 +255,6 @@ export function buildTourSteps(ctx: TourContext): TourStepDef[] {
     .filter((s) => !s.adminOnly || isAdmin)
     .filter((s) => !s.requiresLead || ctx.firstLeadId)
     .filter((s) => !s.requiresFieldSales || ctx.fieldForceTrackingEnabled)
+    .filter(canOpen)
     .map((s) => (s.route === '/leads/:id' ? { ...s, route: `/leads/${ctx.firstLeadId}` } : s));
 }

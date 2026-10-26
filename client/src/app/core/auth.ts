@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { AppConfig } from './app-config';
 import { AuthResult } from './models';
+import { PushNotifications } from './push-notifications';
 
 const STORAGE_KEY = 'knightage_auth';
 
@@ -23,6 +24,7 @@ export class Auth {
     private readonly http: HttpClient,
     private readonly router: Router,
     private readonly appConfig: AppConfig,
+    private readonly pushNotifications: PushNotifications,
   ) {}
 
   get token(): string | null {
@@ -112,6 +114,10 @@ export class Auth {
   }
 
   logout(): void {
+    // Fire-and-forget: shrinks the window where a just-logged-out shared device could
+    // still receive a push meant for whoever logs in next, but must never block or
+    // delay the logout itself.
+    void this.pushNotifications.handleLogout();
     localStorage.removeItem(STORAGE_KEY);
     this.authState.set(null);
     this.router.navigateByUrl('/login');

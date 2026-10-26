@@ -1,0 +1,102 @@
+<div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-3" data-tour="page-header">
+  <div>
+    <h3 class="fw-bold mb-1">Access control</h3>
+    <p class="text-muted mb-0">
+      Choose which screens each type of user can open. The Owner always has access to everything.
+    </p>
+  </div>
+</div>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+@if (loading()) {
+  <app-loader />
+} @else if (matrix()) {
+  <div class="card card-round mb-3">
+    <div class="card-body d-flex flex-wrap align-items-center gap-2">
+      <button type="button" class="btn btn-primary" [disabled]="saving() || changedCount() === 0" (click)="save()">
+        {{ saving() ? 'Saving...' : 'Save changes' }}
+      </button>
+      <button type="button" class="btn btn-label-secondary" [disabled]="saving() || changedCount() === 0" (click)="discard()">Discard</button>
+      <button type="button" class="btn btn-label-secondary ms-md-auto" [disabled]="saving()" (click)="resetToDefaults()">Reset to defaults</button>
+      <span class="text-muted small w-100">
+        @if (changedCount() > 0) {
+          {{ changedCount() }} unsaved change{{ changedCount() === 1 ? '' : 's' }}. Highlighted cells differ from what is saved.
+        } @else {
+          No unsaved changes. "Reset to defaults" puts back the original access for every role (you still need to save).
+        }
+      </span>
+    </div>
+  </div>
+
+  @for (role of emptyRoles(); track role) {
+    <div class="alert alert-warning py-2">
+      With these settings, <strong>{{ role }}</strong> users will only be able to open their own profile.
+    </div>
+  }
+
+  <div class="card card-round mb-3">
+    <div class="card-body">
+      <table class="table access-table table-card-mobile">
+        <thead>
+          <tr>
+            <th>Screen</th>
+            @for (role of roles(); track role) {
+              <th class="text-center">{{ role }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (group of groups(); track group.name) {
+            <tr class="access-group-row">
+              <th [attr.colspan]="roles().length + 1">{{ group.name }}</th>
+            </tr>
+            @for (row of group.screens; track row.key) {
+              <tr>
+                <td data-label="Screen">
+                  <div class="fw-semibold">{{ row.label }}</div>
+                  @if (hint(row); as text) {
+                    <div class="text-muted small">{{ text }}</div>
+                  }
+                </td>
+                @for (role of roles(); track role) {
+                  <td [attr.data-label]="role" class="text-center access-cell" [class.access-changed]="changed(row, role)">
+                    @if (isLocked(row)) {
+                      <span class="access-locked" [title]="cell(row, role) ? 'Always available' : 'Not available to this role'">
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                        {{ cell(row, role) ? 'Always' : 'No' }}
+                      </span>
+                    } @else {
+                      <label class="access-toggle">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          [checked]="cell(row, role)"
+                          [disabled]="saving()"
+                          (change)="toggle(row, role)"
+                          [attr.aria-label]="role + ' can open ' + row.label"
+                        />
+                        <span class="access-state">{{ cell(row, role) ? 'Allowed' : 'Not allowed' }}</span>
+                        @if (!isDefault(row, role)) {
+                          <span class="access-custom" title="Different from the default for this role">customised</span>
+                        }
+                      </label>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="text-muted small">
+    A hidden screen disappears from the menu and can't be opened by its address. Reports, Products, Message Templates and Sales Coverage
+    are also blocked on the server. Customer data that other screens share (for example leads) stays available to those other screens.
+    Changes reach people the next time they open or refresh the app.
+  </p>
+}

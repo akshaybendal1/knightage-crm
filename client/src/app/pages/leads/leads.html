@@ -78,19 +78,100 @@
         <form (ngSubmit)="createLead()">
           <div class="form-group mb-3">
             <label class="form-label" for="name">Name</label>
-            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="name" required />
+            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="name" (input)="onIdentityChange()" required />
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="email">Email</label>
-            <input id="email" name="email" type="email" class="form-control" [(ngModel)]="email" />
+            <input id="email" name="email" type="email" class="form-control" [(ngModel)]="email" (input)="onIdentityChange()" />
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="phone">Phone</label>
-            <input id="phone" name="phone" type="tel" class="form-control" pattern="[0-9+\-\s()]*" [(ngModel)]="phone" />
+            <input id="phone" name="phone" type="tel" class="form-control" pattern="[0-9+\-\s()]*" [(ngModel)]="phone" (input)="onIdentityChange()" />
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="company">Company</label>
-            <input id="company" name="company" type="text" class="form-control" [(ngModel)]="company" />
+            <input id="company" name="company" type="text" class="form-control" [(ngModel)]="company" (input)="onIdentityChange()" />
+          </div>
+          @if (duplicates(); as d) {
+            @if (!selectedCustomer()) {
+              <div class="alert alert-warning duplicate-panel py-2 mb-3" role="alert" data-testid="duplicate-panel">
+                <strong>This may already be in the CRM.</strong>
+                @if (d.customers.length) {
+                  <div class="small fw-semibold mt-2">Existing customers</div>
+                  <ul class="duplicate-list">
+                    @for (m of d.customers; track m.id) {
+                      <li>
+                        {{ matchTitle(m) }} <span class="text-muted">&middot; {{ matchReason(m.matchedOn) }}</span>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" (click)="useExistingCustomer(m)">Use this customer</button>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (d.leads.length) {
+                  <div class="small fw-semibold mt-2">Existing leads</div>
+                  <ul class="duplicate-list">
+                    @for (m of d.leads; track m.id) {
+                      <li>
+                        <a [routerLink]="['/leads', m.id]" target="_blank" rel="noopener">{{ matchTitle(m) }}</a>
+                        <span class="text-muted">&middot; {{ m.stageName || 'no stage' }} &middot; {{ matchReason(m.matchedOn) }}</span>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (hasStrongDuplicate()) {
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="confirmDuplicate" name="confirmDuplicate" [(ngModel)]="confirmDuplicate" />
+                    <label class="form-check-label" for="confirmDuplicate">This is a different lead &mdash; add it anyway</label>
+                  </div>
+                }
+              </div>
+            }
+          }
+          <div class="form-group mb-3">
+            <label class="form-label" for="customerSearch">Customer <span class="text-muted">(optional)</span></label>
+            @if (selectedCustomer(); as c) {
+              <div class="selected-customer d-flex align-items-center justify-content-between gap-2">
+                <span>
+                  <strong>{{ c.name }}</strong>
+                  @if (c.company) { <span class="text-muted"> &middot; {{ c.company }}</span> }
+                </span>
+                <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearCustomer()">Change</button>
+              </div>
+              <div class="form-text">This lead will be linked to this existing customer. Its name, email, phone and company were filled in above.</div>
+            } @else {
+              <div class="customer-picker">
+                <input
+                  id="customerSearch"
+                  name="customerSearch"
+                  type="search"
+                  autocomplete="off"
+                  class="form-control"
+                  placeholder="Search existing customers by name, company, email or phone"
+                  [(ngModel)]="customerQuery"
+                  (focus)="onCustomerFocus()"
+                  (input)="onCustomerQueryChange()"
+                  (blur)="onCustomerBlur()"
+                />
+                @if (showCustomerResults()) {
+                  <ul class="customer-results">
+                    @for (c of customerResults(); track c.id) {
+                      <li>
+                        <button type="button" class="customer-result" (mousedown)="pickCustomer(c)">
+                          <span class="fw-semibold">{{ c.name }}</span>
+                          <span class="text-muted small">{{ customerDetail(c) }}</span>
+                        </button>
+                      </li>
+                    } @empty {
+                      <li class="customer-none text-muted small">No customer found.</li>
+                    }
+                  </ul>
+                }
+              </div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="addAsCustomer" name="addAsCustomer" [(ngModel)]="addAsCustomer" />
+                <label class="form-check-label" for="addAsCustomer">Also add this lead as a new customer</label>
+              </div>
+            }
           </div>
           <div class="form-group mb-3">
             <label class="form-label" for="pipelineStageId">Pipeline stage</label>
@@ -144,7 +225,107 @@
             <label class="form-label" for="notes">Notes</label>
             <input id="notes" name="notes" type="text" class="form-control" [(ngModel)]="notes" />
           </div>
-          <button type="submit" class="btn btn-primary" [disabled]="savingLead()">{{ savingLead() ? 'Adding...' : 'Add lead' }}</button>
+          <div class="form-group mb-3">
+            <label class="form-label" for="newLeadProductId">Product (optional)</label>
+            <select
+              id="newLeadProductId"
+              name="newLeadProductId"
+              class="form-select"
+              [ngModel]="leadProductSelectValue"
+              (ngModelChange)="onLeadProductSelectChange($event)"
+            >
+              <option value="">No product</option>
+              @for (p of activeProducts(); track p.id) {
+                <option [value]="p.id">{{ p.name }}</option>
+              }
+              @if (canAddProducts()) {
+                <option value="__new__">+ Add new product&hellip;</option>
+              }
+            </select>
+            @if (showNewLeadProductInput) {
+              <div class="d-flex gap-2 mt-2 flex-wrap">
+                <input
+                  type="text"
+                  class="form-control form-control-sm flex-grow-1"
+                  style="min-width: 160px;"
+                  placeholder="New product name"
+                  maxlength="200"
+                  [(ngModel)]="newLeadProductName"
+                  name="newLeadProductName"
+                />
+                <input
+                  type="number"
+                  class="form-control form-control-sm"
+                  style="max-width: 120px;"
+                  min="0"
+                  step="0.01"
+                  placeholder="Price"
+                  [(ngModel)]="newLeadProductPrice"
+                  name="newLeadProductPrice"
+                />
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  [disabled]="savingNewLeadProduct() || !newLeadProductName.trim()"
+                  (click)="createLeadProductInline()"
+                >
+                  {{ savingNewLeadProduct() ? 'Adding...' : 'Add' }}
+                </button>
+                <button type="button" class="btn btn-label-secondary btn-sm" (click)="cancelNewLeadProduct()">Cancel</button>
+              </div>
+            }
+          </div>
+          @if (newLeadProductId) {
+            <div class="form-group mb-3">
+              <label class="form-label" for="newLeadProductQuantity">Quantity</label>
+              <input
+                id="newLeadProductQuantity"
+                name="newLeadProductQuantity"
+                type="number"
+                min="1"
+                class="form-control"
+                [(ngModel)]="newLeadProductQuantity"
+              />
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="newLeadProductStageId">Product stage</label>
+              <select
+                id="newLeadProductStageId"
+                name="newLeadProductStageId"
+                class="form-select"
+                [ngModel]="newLeadProductStageId"
+                (ngModelChange)="onLeadProductStageSelectChange($event)"
+                required
+              >
+                <option value="" disabled>Choose a stage</option>
+                @for (s of productStages(); track s.id) {
+                  <option [value]="s.id">{{ s.name }}</option>
+                }
+                <option value="__new__">+ Add new stage&hellip;</option>
+              </select>
+              @if (showNewLeadProductStageInput) {
+                <div class="d-flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    placeholder="New stage name"
+                    [(ngModel)]="newLeadProductStageName"
+                    name="newLeadProductStageName"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    [disabled]="savingNewLeadProductStage() || !newLeadProductStageName.trim()"
+                    (click)="createLeadProductStageInline()"
+                  >
+                    {{ savingNewLeadProductStage() ? 'Adding...' : 'Add' }}
+                  </button>
+                  <button type="button" class="btn btn-label-secondary btn-sm" (click)="showNewLeadProductStageInput = false">Cancel</button>
+                </div>
+              }
+            </div>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="savingLead() || (hasStrongDuplicate() && !confirmDuplicate)">{{ savingLead() ? 'Adding...' : 'Add lead' }}</button>
         </form>
       </div>
     </div>
@@ -189,9 +370,18 @@
   <div class="card card-round mb-3 bulk-action-bar">
     <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
       <span>{{ selectedLeadIds().size }} selected</span>
-      <button type="button" class="btn btn-primary btn-sm" data-tour="bulk-whatsapp-button" (click)="openBulkPicker()">
-        <i class="fab fa-whatsapp"></i> Send WhatsApp Message
-      </button>
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        <select class="form-select form-select-sm bulk-stage-select" aria-label="Move selected leads to stage" [(ngModel)]="moveTargetStageId" name="moveTargetStageId">
+          <option value="">Move to stage&hellip;</option>
+          @for (s of stages(); track s.id) {
+            <option [value]="s.id">{{ s.name }}</option>
+          }
+        </select>
+        <button type="button" class="btn btn-primary btn-sm" [disabled]="!moveTargetStageId" (click)="openMoveDialog()">Move</button>
+        <button type="button" class="btn btn-primary btn-sm" data-tour="bulk-whatsapp-button" (click)="openBulkPicker()">
+          <i class="fab fa-whatsapp"></i> Send WhatsApp Message
+        </button>
+      </div>
     </div>
   </div>
 }
@@ -222,10 +412,10 @@
               @if (editingId() === lead.id) {
                 <tr>
                   <td data-label="Select" class="col-select"></td>
-                  <td data-label="Name" class="col-name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="editName-{{ lead.id }}" /></td>
-                  <td data-label="Email" class="col-email"><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="editEmail-{{ lead.id }}" /></td>
-                  <td data-label="Phone" class="col-phone"><input type="tel" class="form-control form-control-sm" pattern="[0-9+\-\s()]*" [(ngModel)]="editPhone" name="editPhone-{{ lead.id }}" /></td>
-                  <td data-label="Company" class="col-company"><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="editCompany-{{ lead.id }}" /></td>
+                  <td data-label="Name" class="col-name"><input type="text" class="form-control form-control-sm" [(ngModel)]="editName" (input)="onEditIdentityChange()" name="editName-{{ lead.id }}" /></td>
+                  <td data-label="Email" class="col-email"><input type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" (input)="onEditIdentityChange()" name="editEmail-{{ lead.id }}" /></td>
+                  <td data-label="Phone" class="col-phone"><input type="tel" class="form-control form-control-sm" pattern="[0-9+\-\s()]*" [(ngModel)]="editPhone" (input)="onEditIdentityChange()" name="editPhone-{{ lead.id }}" /></td>
+                  <td data-label="Company" class="col-company"><input type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" (input)="onEditIdentityChange()" name="editCompany-{{ lead.id }}" /></td>
                   <td data-label="Stage">
                     <select class="form-select form-select-sm" [(ngModel)]="editStageId" name="editStage-{{ lead.id }}">
                       @for (s of stages(); track s.id) {
@@ -246,8 +436,42 @@
                   <td data-label="Source" class="text-muted col-source">{{ lead.source }}</td>
                   <td data-label="Cost" class="text-muted">{{ lead.totalCost | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
                   <td>
-                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEdit(lead.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit() || (editStrongDuplicate() && !confirmEditDuplicate)" (click)="saveEdit(lead.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
                     <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
+                  </td>
+                </tr>
+                <tr class="edit-duplicate-row">
+                  <td colspan="10">
+                    @if (editDuplicates(); as d) {
+                      <div class="alert alert-warning duplicate-panel py-2 mb-2" role="alert" data-testid="edit-duplicate-panel">
+                        <strong>This may already be in the CRM.</strong>
+                        @if (d.leads.length) {
+                          <div class="small fw-semibold mt-2">Existing leads</div>
+                          <ul class="duplicate-list">
+                            @for (m of d.leads; track m.id) {
+                              <li>
+                                <a [routerLink]="['/leads', m.id]" target="_blank" rel="noopener">{{ matchTitle(m) }}</a>
+                                <span class="text-muted">&middot; {{ m.stageName || 'no stage' }} &middot; {{ matchReason(m.matchedOn) }}</span>
+                              </li>
+                            }
+                          </ul>
+                        }
+                        @if (d.customers.length) {
+                          <div class="small fw-semibold mt-2">Existing customers</div>
+                          <ul class="duplicate-list">
+                            @for (m of d.customers; track m.id) {
+                              <li>{{ matchTitle(m) }} <span class="text-muted">&middot; {{ matchReason(m.matchedOn) }}</span></li>
+                            }
+                          </ul>
+                        }
+                        @if (editStrongDuplicate()) {
+                          <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="confirmEditDuplicate-row-{{ lead.id }}" name="confirmEditDuplicate-row-{{ lead.id }}" [(ngModel)]="confirmEditDuplicate" />
+                            <label class="form-check-label" for="confirmEditDuplicate-row-{{ lead.id }}">It's a different lead &mdash; save it anyway</label>
+                          </div>
+                        }
+                      </div>
+                    }
                   </td>
                 </tr>
               } @else {
@@ -291,19 +515,19 @@
         <div class="lead-card">
           <div class="form-group mb-2">
             <label class="form-label" for="cardEditName-{{ lead.id }}">Name</label>
-            <input id="cardEditName-{{ lead.id }}" type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="cardEditName-{{ lead.id }}" />
+            <input id="cardEditName-{{ lead.id }}" type="text" class="form-control form-control-sm" [(ngModel)]="editName" (input)="onEditIdentityChange()" name="cardEditName-{{ lead.id }}" />
           </div>
           <div class="form-group mb-2">
             <label class="form-label" for="cardEditEmail-{{ lead.id }}">Email</label>
-            <input id="cardEditEmail-{{ lead.id }}" type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" name="cardEditEmail-{{ lead.id }}" />
+            <input id="cardEditEmail-{{ lead.id }}" type="email" class="form-control form-control-sm" [(ngModel)]="editEmail" (input)="onEditIdentityChange()" name="cardEditEmail-{{ lead.id }}" />
           </div>
           <div class="form-group mb-2">
             <label class="form-label" for="cardEditPhone-{{ lead.id }}">Phone</label>
-            <input id="cardEditPhone-{{ lead.id }}" type="tel" class="form-control form-control-sm" pattern="[0-9+\-\s()]*" [(ngModel)]="editPhone" name="cardEditPhone-{{ lead.id }}" />
+            <input id="cardEditPhone-{{ lead.id }}" type="tel" class="form-control form-control-sm" pattern="[0-9+\-\s()]*" [(ngModel)]="editPhone" (input)="onEditIdentityChange()" name="cardEditPhone-{{ lead.id }}" />
           </div>
           <div class="form-group mb-2">
             <label class="form-label" for="cardEditCompany-{{ lead.id }}">Company</label>
-            <input id="cardEditCompany-{{ lead.id }}" type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" name="cardEditCompany-{{ lead.id }}" />
+            <input id="cardEditCompany-{{ lead.id }}" type="text" class="form-control form-control-sm" [(ngModel)]="editCompany" (input)="onEditIdentityChange()" name="cardEditCompany-{{ lead.id }}" />
           </div>
           <div class="form-group mb-2">
             <label class="form-label" for="cardEditStage-{{ lead.id }}">Stage</label>
@@ -324,38 +548,79 @@
               }
             </select>
           </div>
+          @if (editDuplicates(); as d) {
+            <div class="alert alert-warning duplicate-panel py-2 mb-2" role="alert" data-testid="edit-duplicate-panel">
+              <strong>This may already be in the CRM.</strong>
+              @if (d.leads.length) {
+                <div class="small fw-semibold mt-2">Existing leads</div>
+                <ul class="duplicate-list">
+                  @for (m of d.leads; track m.id) {
+                    <li>
+                      <a [routerLink]="['/leads', m.id]" target="_blank" rel="noopener">{{ matchTitle(m) }}</a>
+                      <span class="text-muted">&middot; {{ m.stageName || 'no stage' }} &middot; {{ matchReason(m.matchedOn) }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (d.customers.length) {
+                <div class="small fw-semibold mt-2">Existing customers</div>
+                <ul class="duplicate-list">
+                  @for (m of d.customers; track m.id) {
+                    <li>{{ matchTitle(m) }} <span class="text-muted">&middot; {{ matchReason(m.matchedOn) }}</span></li>
+                  }
+                </ul>
+              }
+              @if (editStrongDuplicate()) {
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="checkbox" id="confirmEditDuplicate-card-{{ lead.id }}" name="confirmEditDuplicate-card-{{ lead.id }}" [(ngModel)]="confirmEditDuplicate" />
+                  <label class="form-check-label" for="confirmEditDuplicate-card-{{ lead.id }}">It's a different lead &mdash; save it anyway</label>
+                </div>
+              }
+            </div>
+          }
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEdit(lead.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="savingEdit() || (editStrongDuplicate() && !confirmEditDuplicate)" (click)="saveEdit(lead.id)">{{ savingEdit() ? 'Saving...' : 'Save' }}</button>
             <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="savingEdit()" (click)="cancelEdit()">Cancel</button>
           </div>
         </div>
       } @else {
         <div class="lead-card">
-          <!-- 1: actions -->
-          <div class="lead-card-actions">
-            <input type="checkbox" class="form-check-input" [checked]="isSelected(lead.id)" (change)="toggleSelected(lead.id)" />
-            <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
-            <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
-            <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteLead(lead)">Delete</button>
-            <app-whatsapp-composer [phone]="lead.phone" [leadName]="lead.name" [yourName]="yourName" [templates]="templates()" />
-          </div>
-          <div class="lead-card-actions lead-card-quick-add">
-            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'meeting' }" class="btn btn-label-secondary btn-sm">+ Meeting</a>
-            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'note' }" class="btn btn-label-secondary btn-sm">+ Note</a>
-            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'task' }" class="btn btn-label-secondary btn-sm">+ Task</a>
-            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'product' }" class="btn btn-label-secondary btn-sm">+ Product</a>
-          </div>
-
-          <!-- 2: basic details -->
-          <div class="lead-card-basic">
-            <div class="lead-card-name">{{ lead.name }}</div>
-            <div class="text-muted small">{{ lead.company || '—' }}</div>
-            <div class="text-muted small">Owner: {{ ownerLabel(lead.ownerUserId) }}</div>
+          <!-- 1: identity -- who this lead is, first and most prominent -->
+          <div class="lead-card-top">
+            <input type="checkbox" class="form-check-input lead-card-select" [checked]="isSelected(lead.id)" (change)="toggleSelected(lead.id)" />
+            <div class="lead-card-identity">
+              <div class="lead-card-name">{{ lead.name }}</div>
+              <div class="text-muted small">{{ lead.company || '—' }}</div>
+            </div>
             <span class="badge badge-primary">{{ stageName(lead.pipelineStageId) }}</span>
+          </div>
+          <div class="lead-card-meta">
+            <span class="text-muted small">{{ ownerLabel(lead.ownerUserId) }}</span>
             @if (leadStuck(lead)) { <span class="badge badge-warning">Stuck</span> }
           </div>
 
-          <!-- 3: collapsible rest -->
+          <!-- 2: primary actions -- View leads, Delete is de-emphasized (icon-only,
+               same visual weight as Edit) rather than sitting equal to View up front -->
+          <div class="lead-card-actions">
+            <a [routerLink]="['/leads', lead.id]" class="btn btn-primary btn-sm">View</a>
+            <button type="button" class="btn btn-label-secondary btn-sm icon-btn" (click)="startEdit(lead)" title="Edit" aria-label="Edit">
+              <i class="fa fa-pen"></i>
+            </button>
+            <app-whatsapp-composer [phone]="lead.phone" [leadName]="lead.name" [yourName]="yourName" [templates]="templates()" />
+            <button type="button" class="btn btn-label-danger btn-sm icon-btn" (click)="deleteLead(lead)" title="Delete" aria-label="Delete">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+
+          <!-- 3: quick-add chips, compacted to a single row of icon+label pills -->
+          <div class="lead-card-quick-add">
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'meeting' }" class="lead-card-chip"><i class="fa fa-calendar-plus"></i> Meeting</a>
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'note' }" class="lead-card-chip"><i class="fa fa-sticky-note"></i> Note</a>
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'task' }" class="lead-card-chip"><i class="fa fa-tasks"></i> Task</a>
+            <a [routerLink]="['/leads', lead.id]" [queryParams]="{ open: 'product' }" class="lead-card-chip"><i class="fa fa-box"></i> Product</a>
+          </div>
+
+          <!-- 4: collapsible rest -->
           <button type="button" class="btn btn-label-secondary btn-sm lead-card-toggle" (click)="toggleExpanded(lead.id)">
             {{ isExpanded(lead.id) ? 'Show less −' : 'Show more +' }}
           </button>
@@ -400,4 +665,14 @@
   [messageTemplate]="bulkMessageTemplate()"
   [yourName]="yourName"
   (closed)="queueDrawerOpen.set(false)"
+/>
+
+<app-stage-move-dialog
+  [open]="moveDialogOpen()"
+  noun="lead"
+  [stageName]="stageName(moveTargetStageId)"
+  [items]="moveDialogItems()"
+  [busy]="moveBusy()"
+  (confirmed)="confirmBulkMove($event)"
+  (closed)="closeMoveDialog()"
 />

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://crm.knightagetech.com/about</loc>
+  </url>
+  <url>
+    <loc>https://crm.knightagetech.com/login</loc>
+  </url>
+  <url>
+    <loc>https://crm.knightagetech.com/privacy-policy</loc>
+  </url>
+  <url>
+    <loc>https://crm.knightagetech.com/terms-of-service</loc>
+  </url>
+  <url>
+    <loc>https://crm.knightagetech.com/delete-account</loc>
+  </url>
+  <url>
+    <loc>https://crm.knightagetech.com/user-guide</loc>
+    <changefreq>monthly</changefreq>
+  </url>
+</urlset>

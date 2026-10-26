@@ -3,6 +3,18 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
+  BulkStageMoveResponse,
+  Customer,
+  DuplicateResult,
+  LeadCustomerResult,
+  CustomerList,
+  CustomerSaveResponse,
+  InventorySyncResult,
+  WonLeadImportResult,
+  WonLeadPage,
+  MyScreens,
+  ScreenAccessMatrix,
+  StageMoveItem,
   CustomRange,
   CustomReportDefinition,
   CustomReportRow,
@@ -178,8 +190,72 @@ export class CrmApi {
     return this.http.post<{ importedCount: number; errors: string[] }>('/api/leads/import', formData);
   }
 
+  // Customers -- made when a lead is won, or added by hand (field sales form, Customers screen)
+  getCustomers() {
+    return this.http.get<CustomerList>('/api/customers');
+  }
+
+  createCustomer(payload: { name: string; company?: string; email?: string; phone?: string }) {
+    return this.http.post<CustomerSaveResponse>('/api/customers', payload);
+  }
+
+  // Type-ahead over customers (name / organization / email / phone): a handful of matches, not the whole list.
+  searchCustomers(q: string, limit = 8) {
+    return this.http.get<Customer[]>('/api/customers/search', { params: { q, limit } });
+  }
+
+  // Asks the CRM to pull in customers added in the Inventory portal (throttled server-side; the answer can be ignored).
+  refreshCustomersFromInventory() {
+    return this.http.post<{ added: number }>('/api/customers/refresh', {});
+  }
+
+  // Leads and customers that look like the one being typed in (same email, phone, or name + company).
+  findLeadDuplicates(query: { name?: string; company?: string; email?: string; phone?: string; excludeId?: string }) {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value) {
+        params = params.set(key, value);
+      }
+    }
+    return this.http.get<DuplicateResult>('/api/leads/duplicates', { params });
+  }
+
+  getLeadCustomer(leadId: string) {
+    return this.http.get<{ customer: Customer | null }>(`/api/leads/${leadId}/customer`);
+  }
+
+  // Exactly one of customerId (link an existing customer) or createFromLead (make a customer from this lead).
+  setLeadCustomer(leadId: string, payload: { customerId?: string; createFromLead?: boolean }) {
+    return this.http.post<LeadCustomerResult>(`/api/leads/${leadId}/customer`, payload);
+  }
+
+  unlinkLeadCustomer(leadId: string) {
+    return this.http.post<void>(`/api/leads/${leadId}/customer/unlink`, {});
+  }
+
+  importWonLeadsAsCustomers() {
+    return this.http.post<WonLeadImportResult>('/api/customers/import-won-leads', {});
+  }
+
+  getWonLeadsWithoutCustomer(search: string, page: number, pageSize: number) {
+    const params: Record<string, string | number> = { page, pageSize };
+    if (search.trim()) {
+      params['search'] = search.trim();
+    }
+    return this.http.get<WonLeadPage>('/api/customers/won-leads', { params });
+  }
+
+  convertWonLeadsToCustomers(leadIds: string[]) {
+    return this.http.post<WonLeadImportResult>('/api/customers/convert-won-leads', { leadIds });
+  }
+
+  syncCustomersToInventory() {
+    return this.http.post<InventorySyncResult>('/api/customers/sync-inventory', {});
+  }
+
   // Field Force Tracking -- sales entries
   createSalesEntry(payload: {
+    customerId?: string;
     customerName: string;
     company?: string;
     email?: string;
@@ -304,8 +380,24 @@ export class CrmApi {
     return this.http.post<LeadProduct>(`/api/lead-products/${id}`, { quantity });
   }
 
-  updateLeadProductStage(id: string, productStageId: string) {
-    return this.http.post<LeadProduct>(`/api/lead-products/${id}/stage`, { productStageId });
+  updateLeadProductStage(id: string, productStageId: string, note?: string) {
+    return this.http.post<LeadProduct>(`/api/lead-products/${id}/stage`, { productStageId, note: note || undefined });
+  }
+
+  getMyScreens() {
+    return this.http.get<MyScreens>('/api/screen-access/me');
+  }
+
+  getScreenAccessMatrix() {
+    return this.http.get<ScreenAccessMatrix>('/api/screen-access');
+  }
+
+  saveScreenAccess(allowed: Record<string, Record<string, boolean>>) {
+    return this.http.post<void>('/api/screen-access', { allowed });
+  }
+
+  bulkUpdateLeadProductStage(productStageId: string, items: StageMoveItem[]) {
+    return this.http.post<BulkStageMoveResponse>('/api/lead-products/stage/bulk', { productStageId, items });
   }
 
   removeLeadProduct(id: string) {
@@ -362,8 +454,12 @@ export class CrmApi {
     return this.http.get<PagedLeadProductTimelineItems>('/api/timeline/lead-products', { params });
   }
 
-  updateLeadStage(id: string, pipelineStageId: string) {
-    return this.http.post<Lead>(`/api/leads/${id}/stage`, { pipelineStageId });
+  updateLeadStage(id: string, pipelineStageId: string, note?: string) {
+    return this.http.post<Lead>(`/api/leads/${id}/stage`, { pipelineStageId, note: note || undefined });
+  }
+
+  bulkUpdateLeadStage(pipelineStageId: string, items: StageMoveItem[]) {
+    return this.http.post<BulkStageMoveResponse>('/api/leads/stage/bulk', { pipelineStageId, items });
   }
 
   // Dashboard
@@ -547,5 +643,14 @@ export class CrmApi {
 
   requestSubscription() {
     return this.http.post<{ message: string }>('/api/organization/subscription-request', {});
+  }
+
+  // Device tokens (Android push notifications)
+  registerDeviceToken(token: string, platform: string) {
+    return this.http.post<void>('/api/device-tokens', { token, platform });
+  }
+
+  removeDeviceToken(token: string) {
+    return this.http.delete<void>('/api/device-tokens', { params: new HttpParams().set('token', token) });
   }
 }

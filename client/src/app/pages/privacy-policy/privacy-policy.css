@@ -1,0 +1,104 @@
+.doc-wrap {
+  min-height: 100vh;
+  background: var(--bg-page);
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.doc-card {
+  width: 100%;
+  max-width: 760px;
+}
+
+.doc-card .card-body {
+  padding: 40px;
+}
+
+@media (max-width: 575.98px) {
+  .doc-card .card-body {
+    padding: 24px 18px;
+  }
+}
+
+.doc-wordmark {
+  margin-bottom: 24px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.doc-wordmark-primary {
+  color: var(--text-primary);
+}
+
+.doc-wordmark-accent {
+  color: var(--accent);
+}
+
+.doc-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.doc-updated {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 28px;
+}
+
+.doc-body h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 28px;
+  margin-bottom: 10px;
+}
+
+.doc-body h2:first-child {
+  margin-top: 0;
+}
+
+.doc-body p,
+.doc-body li {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.doc-body p {
+  margin-bottom: 12px;
+}
+
+.doc-body ul {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.doc-body li {
+  margin-bottom: 6px;
+}
+
+.doc-body a {
+  color: var(--accent);
+}
+
+.doc-body strong {
+  color: var(--text-primary);
+}
+
+.doc-footer {
+  text-align: center;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+}
+
+.doc-footer a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}

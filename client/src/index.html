@@ -3,12 +3,49 @@
 <head>
   <meta charset="utf-8">
   <title>Knightage CRM</title>
+  <meta name="description" content="Knightage CRM is a sales and lead-management tool for businesses: track leads through a sales pipeline, schedule tasks and meetings, and generate documents, on the web or Android.">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1572E8">
+  <link rel="canonical" href="https://crm.knightagetech.com/">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Open Graph / Twitter Card -- static, so this is what non-JS-executing link-preview
+       bots (Slack, WhatsApp, LinkedIn, etc.) always see regardless of route. Per-route
+       title/description for JS-executing crawlers (Googlebot) is handled dynamically by
+       core/seo.ts once the app boots -- see that file for why the two can't fully merge. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Knightage CRM">
+  <meta property="og:title" content="Knightage CRM">
+  <meta property="og:description" content="Sales and lead-management for businesses: pipeline tracking, tasks, meetings, and documents, on the web or Android.">
+  <meta property="og:url" content="https://crm.knightagetech.com/">
+  <meta property="og:image" content="https://crm.knightagetech.com/og-image.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Knightage CRM">
+  <meta name="twitter:description" content="Sales and lead-management for businesses: pipeline tracking, tasks, meetings, and documents, on the web or Android.">
+  <meta name="twitter:image" content="https://crm.knightagetech.com/og-image.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Knightage CRM",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web, Android",
+    "description": "Sales and lead-management tool for businesses: track leads through a sales pipeline, schedule tasks and meetings, and generate documents.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Knightage Tech",
+      "url": "https://knightagetech.com/"
+    }
+  }
+  </script>
+
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>

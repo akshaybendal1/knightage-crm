@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Json;
+using Knightage.Crm.Core.Exceptions;
 using Knightage.Crm.Core.Interfaces;
 
 namespace Knightage.Crm.Infrastructure.ExternalServices;
@@ -31,8 +33,22 @@ public class IdentityOrganizationClient : IIdentityOrganizationClient
     {
         var client = CreateClient(authorizationHeader);
         var response = await client.PutAsJsonAsync("api/organizations/me", new { name, contactEmail, contactPhone, address }, cancellationToken);
+
+        // A 409 (name already taken) or 400 (empty / too long) carries a message meant for the
+        // user. Pass it on instead of collapsing it into a generic "could not save".
+        if (response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.BadRequest)
+        {
+            var problem = await response.Content.ReadFromJsonAsync<IdentityProblem>(cancellationToken: cancellationToken);
+            if (!string.IsNullOrWhiteSpace(problem?.Message))
+            {
+                throw new OrganizationUpdateRejectedException((int)response.StatusCode, problem.Message);
+            }
+        }
+
         response.EnsureSuccessStatusCode();
     }
+
+    private sealed record IdentityProblem(string? Message);
 
     private HttpClient CreateClient(string? authorizationHeader)
     {

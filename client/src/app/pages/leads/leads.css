@@ -64,15 +64,21 @@
   flex-wrap: nowrap;
 }
 
-/* Mobile card view (below 768px): a dedicated 3-section card per lead,
+/* Mobile card view (below 768px): a dedicated 4-section card per lead,
    replacing the desktop table entirely rather than reusing the generic
    .table-card-mobile row-stacking (see styles.css's Calendar section for the
-   same desktop-grid / mobile-list split pattern this mirrors). Section 1 is
-   the actions row(s) -- select/view/edit/whatsapp plus quick-add links that
-   navigate to Lead Detail with the matching form pre-opened. Section 2 is
-   the always-visible basics (name, company, owner, stage). Section 3 is the
-   rest (email, phone, source, cost), hidden behind a Show more/less toggle
-   so a long list of cards doesn't turn into a wall of text on a phone. */
+   same desktop-grid / mobile-list split pattern this mirrors).
+   Section 1 (.lead-card-top/.lead-card-meta) is who this lead is -- name,
+   company, stage, owner -- shown first so scanning a long list doesn't mean
+   scrolling past two rows of buttons before finding out whose card it is
+   (that was the original order, and read as "all buttons" on a phone).
+   Section 2 (.lead-card-actions) is the primary actions: View is the one a
+   user reaches for constantly, so it's the only one with solid emphasis;
+   Edit/Delete are same-weight icon buttons so Delete doesn't visually compete
+   with View for a first tap. Section 3 (.lead-card-quick-add) is the
+   navigate-to-Lead-Detail-with-a-form-pre-opened shortcuts, compacted to
+   icon+label pills instead of full-width buttons. Section 4 is the rest
+   (email, phone, source, cost), still hidden behind Show more/less. */
 .lead-card-list {
   display: none;
 }
@@ -85,22 +91,20 @@
   margin-bottom: 10px;
 }
 
-.lead-card-actions {
+.lead-card-top {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-.lead-card-quick-add {
-  margin-top: 8px;
+.lead-card-select {
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
-.lead-card-basic {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 12px;
+.lead-card-identity {
+  flex: 1;
+  min-width: 0;
 }
 
 .lead-card-name {
@@ -109,9 +113,65 @@
   overflow-wrap: anywhere;
 }
 
-.lead-card-basic .badge {
+.lead-card-top .badge {
+  flex-shrink: 0;
+}
+
+.lead-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 4px;
-  align-self: flex-start;
+  padding-left: 26px;
+}
+
+.lead-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lead-card-actions .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.lead-card-quick-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.lead-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lead-card-chip:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.lead-card-chip i {
+  font-size: 0.72rem;
 }
 
 .lead-card-toggle {

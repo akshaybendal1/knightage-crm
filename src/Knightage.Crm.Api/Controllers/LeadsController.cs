@@ -1,7 +1,10 @@
 using System.Text.Json;
 using Knightage.Crm.Api.Contracts;
+using Knightage.Crm.Core.Customers;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
+using Knightage.Crm.Core.Tenancy;
+using Knightage.Crm.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,6 +28,14 @@ public class LeadsController : ControllerBase
     private readonly IProductStageRepository _productStageRepository;
     private readonly IIdentityUserDirectory _identityUserDirectory;
     private readonly IReportExcelExporter _excelExporter;
+    private readonly ISubscriptionStatusProvider _subscriptionStatusProvider;
+    private readonly TenantContext _tenantContext;
+    private readonly ILogger<LeadsController> _logger;
+    private readonly ICustomerService _customerService;
+    private readonly ICustomerRepository _customerRepository;
+
+    // Most leads a CSV import may turn into customers while the request waits.
+    private const int MaxInlineCustomerConversions = 200;
 
     public LeadsController(
         ILeadRepository leadRepository,
@@ -39,7 +50,12 @@ public class LeadsController : ControllerBase
         IDocumentRepository documentRepository,
         IProductStageRepository productStageRepository,
         IIdentityUserDirectory identityUserDirectory,
-        IReportExcelExporter excelExporter)
+        IReportExcelExporter excelExporter,
+        ISubscriptionStatusProvider subscriptionStatusProvider,
+        TenantContext tenantContext,
+        ILogger<LeadsController> logger,
+        ICustomerService customerService,
+        ICustomerRepository customerRepository)
     {
         _leadRepository = leadRepository;
         _importParser = importParser;
@@ -54,6 +70,11 @@ public class LeadsController : ControllerBase
         _productStageRepository = productStageRepository;
         _identityUserDirectory = identityUserDirectory;
         _excelExporter = excelExporter;
+        _subscriptionStatusProvider = subscriptionStatusProvider;
+        _tenantContext = tenantContext;
+        _logger = logger;
+        _customerService = customerService;
+        _customerRepository = customerRepository;
     }
 
     [HttpGet]
@@ -71,7 +92,9 @@ public class LeadsController : ControllerBase
     // cover this org's realistic lead volume rather than adding a parallel unpaged
     // query, mirroring ReportsController's own "export what you'd otherwise page
     // through" convention.
+    // A whole-list download, so it follows the Leads screen's access (Access Control) on the server too.
     [HttpGet("export")]
+    [RequireScreen("leads")]
     public async Task<IActionResult> Export([FromQuery] Guid? pipelineStageId, [FromQuery] Guid? productId, [FromQuery] string? ownerUserId, [FromQuery] string? search)
     {
         var (items, _) = await _leadRepository.GetPagedAsync(pipelineStageId, productId, ownerUserId, search, page: 1, pageSize: 100_000);
@@ -108,8 +131,14 @@ public class LeadsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(LeadRequest request)
+    public async Task<IActionResult> Create(LeadRequest request, CancellationToken cancellationToken)
     {
+        var details = await _subscriptionStatusProvider.GetDetailsAsync(_tenantContext.RequireOrganizationId(), Request.Headers.Authorization.ToString(), cancellationToken);
+        if (details.PlanMaxRecords is int maxRecords && await _leadRepository.CountActiveAsync() >= maxRecords)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = $"This organization is at its plan's limit of {maxRecords} records. Ask your admin to upgrade the plan to add more." });
+        }
+
         // [Required] on PipelineStageId is a no-op -- Guid is a non-nullable value type, so a
         // missing field in the request body just model-binds to Guid.Empty, which satisfies
         // [Required] fine. Without this check, both a missing id and a genuinely nonexistent
@@ -150,6 +179,11 @@ public class LeadsController : ControllerBase
             CreatedByUserId = User.FindFirst("sub")?.Value,
             CreatedAtUtc = lead.CreatedAtUtc
         });
+        if (stage.IsWon)
+        {
+            await ConvertWonAsync(new[] { lead }, cancellationToken);
+        }
+
         return CreatedAtAction(nameof(GetById), new { id = lead.Id }, lead);
     }
 
@@ -210,6 +244,11 @@ public class LeadsController : ControllerBase
                 CreatedByUserId = User.FindFirst("sub")?.Value,
                 CreatedAtUtc = DateTime.UtcNow
             });
+
+            if (stage.IsWon)
+            {
+                await ConvertWonAsync(new[] { existing }, HttpContext.RequestAborted);
+            }
         }
 
         return Ok(existing);
@@ -218,7 +257,7 @@ public class LeadsController : ControllerBase
     // Lightweight stage-only move, for the Timeline board's drag-and-drop (and Android's
     // long-press move dialog) -- Update above requires the entire LeadRequest, which is
     // unusable for a quick card move. Reuses the exact same StageChange activity shape
-    // Update already logs.
+    // Update already logs; an optional Note rides along in that activity's metadata.
     [HttpPost("{id:guid}/stage")]
     public async Task<IActionResult> UpdateStage(Guid id, UpdateLeadStageRequest request)
     {
@@ -234,38 +273,130 @@ public class LeadsController : ControllerBase
             return BadRequest(new { message = "pipelineStageId does not refer to an existing pipeline stage." });
         }
 
-        if (existing.PipelineStageId != request.PipelineStageId)
+        var moved = await MoveLeadToStageAsync(existing, stage, request.Note, new Dictionary<Guid, string>());
+        if (moved && stage.IsWon)
         {
-            var previousStageId = existing.PipelineStageId;
-            var fromStage = await _stageRepository.GetByIdAsync(previousStageId);
-            var now = DateTime.UtcNow;
-
-            await _leadRepository.UpdateStageAsync(id, request.PipelineStageId, now);
-
-            var metadata = JsonSerializer.Serialize(new
-            {
-                fromStageId = previousStageId,
-                fromStage = fromStage?.Name ?? "Unknown",
-                toStageId = request.PipelineStageId,
-                toStage = stage.Name
-            });
-
-            await _activityRepository.CreateAsync(new LeadActivity
-            {
-                Id = Guid.NewGuid(),
-                LeadId = id,
-                Type = "StageChange",
-                Content = $"Moved from {fromStage?.Name ?? "Unknown"} to {stage.Name}",
-                Metadata = metadata,
-                CreatedByUserId = User.FindFirst("sub")?.Value,
-                CreatedAtUtc = now
-            });
-
-            existing.PipelineStageId = request.PipelineStageId;
-            existing.PipelineStageChangedAtUtc = now;
+            await ConvertWonAsync(new[] { existing }, HttpContext.RequestAborted);
         }
 
         return Ok(existing);
+    }
+
+    // Moves many leads to one stage in a single request, each with its own optional note (the
+    // client fills the same text into every item for "same note for all"). Each lead is moved
+    // on its own, in order, and reported on individually: one missing or failing lead never
+    // stops or undoes the others, and nothing is deleted or rewritten -- a move is the same
+    // stage update plus one new timeline entry that the single move above makes.
+    [HttpPost("stage/bulk")]
+    public async Task<IActionResult> BulkUpdateStage(BulkLeadStageMoveRequest request)
+    {
+        if (request.Items.Count is 0 or > StageMoveLimits.MaxItems)
+        {
+            return BadRequest(new { message = $"Select between 1 and {StageMoveLimits.MaxItems} leads to move at a time." });
+        }
+
+        var stage = await _stageRepository.GetByIdAsync(request.PipelineStageId);
+        if (stage is null)
+        {
+            return BadRequest(new { message = "pipelineStageId does not refer to an existing pipeline stage." });
+        }
+
+        var stageNames = new Dictionary<Guid, string>();
+        var results = new List<StageMoveResult>(request.Items.Count);
+        var movedIntoWon = new List<Lead>();
+        // A lead listed twice is moved once (the first entry wins).
+        foreach (var item in request.Items.DistinctBy(i => i.Id))
+        {
+            try
+            {
+                var lead = await _leadRepository.GetByIdAsync(item.Id);
+                if (lead is null)
+                {
+                    results.Add(new StageMoveResult(item.Id, "NotFound", "Lead not found."));
+                    continue;
+                }
+
+                var moved = await MoveLeadToStageAsync(lead, stage, item.Note, stageNames);
+                if (moved && stage.IsWon)
+                {
+                    movedIntoWon.Add(lead);
+                }
+
+                results.Add(moved
+                    ? new StageMoveResult(item.Id, "Moved", null)
+                    : new StageMoveResult(item.Id, "Unchanged", $"Already in {stage.Name}."));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Bulk stage move failed for lead {LeadId}.", item.Id);
+                results.Add(new StageMoveResult(item.Id, "Failed", "Could not move this lead."));
+            }
+        }
+
+        if (movedIntoWon.Count > 0)
+        {
+            await ConvertWonAsync(movedIntoWon, HttpContext.RequestAborted);
+        }
+
+        return Ok(new BulkStageMoveResponse(
+            results.Count(r => r.Status == "Moved"),
+            results.Count(r => r.Status == "Unchanged"),
+            results.Count(r => r.Status is "NotFound" or "Failed"),
+            results));
+    }
+
+    // A lead that has reached a Won stage becomes (or is linked to) a customer, which also shows up in the field
+    // sales form and the Inventory portal. Never throws and never fails the move that triggered it.
+    private Task ConvertWonAsync(IReadOnlyCollection<Lead> leads, CancellationToken cancellationToken) =>
+        _customerService.ConvertWonLeadsAsync(leads, User.FindFirst("sub")?.Value, Request.Headers.Authorization.ToString(), cancellationToken);
+
+    // Shared by the single and bulk moves so both write exactly the same thing. Returns false
+    // (and writes nothing) when the lead is already in the target stage. The note is optional
+    // and kept in the StageChange activity's metadata next to the from/to stage.
+    private async Task<bool> MoveLeadToStageAsync(Lead existing, PipelineStage stage, string? note, Dictionary<Guid, string> stageNames)
+    {
+        if (existing.PipelineStageId == stage.Id)
+        {
+            return false;
+        }
+
+        var previousStageId = existing.PipelineStageId;
+        if (!stageNames.TryGetValue(previousStageId, out var fromStageName))
+        {
+            fromStageName = (await _stageRepository.GetByIdAsync(previousStageId))?.Name ?? "Unknown";
+            stageNames[previousStageId] = fromStageName;
+        }
+
+        var now = DateTime.UtcNow;
+        await _leadRepository.UpdateStageAsync(existing.Id, stage.Id, now);
+
+        var trimmedNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        var metadata = new Dictionary<string, object>
+        {
+            ["fromStageId"] = previousStageId,
+            ["fromStage"] = fromStageName,
+            ["toStageId"] = stage.Id,
+            ["toStage"] = stage.Name,
+        };
+        if (trimmedNote is not null)
+        {
+            metadata["note"] = trimmedNote;
+        }
+
+        await _activityRepository.CreateAsync(new LeadActivity
+        {
+            Id = Guid.NewGuid(),
+            LeadId = existing.Id,
+            Type = "StageChange",
+            Content = $"Moved from {fromStageName} to {stage.Name}",
+            Metadata = JsonSerializer.Serialize(metadata),
+            CreatedByUserId = User.FindFirst("sub")?.Value,
+            CreatedAtUtc = now
+        });
+
+        existing.PipelineStageId = stage.Id;
+        existing.PipelineStageChangedAtUtc = now;
+        return true;
     }
 
     // Soft delete: sets IsActive = false so GetPagedAsync (and by extension the Leads
@@ -286,6 +417,117 @@ public class LeadsController : ControllerBase
         return NoContent();
     }
 
+    // Duplicate check for a lead being typed in by hand: active leads and customers with the same email, the same phone (last
+    // 10 digits), or the same name + company. It only reports; whether to go ahead is the person's call. excludeId leaves out a
+    // lead that is being edited. Open to every role that can add leads.
+    [HttpGet("duplicates")]
+    public async Task<IActionResult> FindDuplicates([FromQuery] string? name, [FromQuery] string? company, [FromQuery] string? email, [FromQuery] string? phone, [FromQuery] Guid? excludeId)
+    {
+        var query = DuplicateQuery.Create(name, company, email, phone);
+        if (query.IsEmpty)
+        {
+            return Ok(new { leads = Array.Empty<LeadMatch>(), customers = Array.Empty<CustomerMatch>() });
+        }
+
+        var leads = await _leadRepository.FindDuplicatesAsync(query, excludeId, 8);
+        var customers = await _customerRepository.FindDuplicatesAsync(query, 8);
+        return Ok(new { leads, customers });
+    }
+
+    [HttpGet("{id:guid}/customer")]
+    public async Task<IActionResult> GetCustomer(Guid id)
+    {
+        if (await _leadRepository.GetByIdAsync(id) is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new { customer = await _customerRepository.GetForLeadAsync(id) });
+    }
+
+    // Links this lead to an existing customer, or makes it a customer right now (it does not have to be won). Making a customer
+    // from the lead returns the customer this person already is when there is one, instead of creating a second record.
+    [HttpPost("{id:guid}/customer")]
+    public async Task<IActionResult> SetCustomer(Guid id, SetLeadCustomerRequest request, CancellationToken cancellationToken)
+    {
+        var lead = await _leadRepository.GetByIdAsync(id);
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        if ((request.CustomerId is not null) == request.CreateFromLead)
+        {
+            return BadRequest(new { message = "Choose an existing customer, or add this lead as a new customer." });
+        }
+
+        var current = await _customerRepository.GetForLeadAsync(id);
+        if (request.CustomerId is Guid customerId)
+        {
+            var customer = await _customerRepository.GetByIdAsync(customerId);
+            if (customer is null || !customer.IsActive)
+            {
+                return BadRequest(new { message = "That customer no longer exists. Pick another customer." });
+            }
+
+            if (current is not null)
+            {
+                return current.Id == customerId
+                    ? Ok(new LeadCustomerResponse(current, false, true))
+                    : Conflict(new { message = $"This lead is already linked to {current.Name}. Remove that link first." });
+            }
+
+            await _customerRepository.LinkLeadAsync(id, customerId);
+            await LogCustomerActivityAsync(id, $"Linked to customer {customer.Name}");
+            return Ok(new LeadCustomerResponse(await _customerRepository.GetForLeadAsync(id) ?? customer, false, true));
+        }
+
+        var result = await _customerService.CreateFromLeadAsync(lead, User.FindFirst("sub")?.Value, Request.Headers.Authorization.ToString(), cancellationToken);
+        if (result is null)
+        {
+            return BadRequest(new { message = "This lead has no name, so it can't be made a customer." });
+        }
+
+        if (current is null)
+        {
+            await LogCustomerActivityAsync(id, result.AlreadyExisted ? $"Linked to existing customer {result.Customer.Name}" : $"Added as customer {result.Customer.Name}");
+        }
+
+        // Re-read so the linked-lead count in the answer is current (the save itself returns the row without it).
+        return Ok(new LeadCustomerResponse(await _customerRepository.GetForLeadAsync(id) ?? result.Customer, !result.AlreadyExisted, result.AlreadyExisted));
+    }
+
+    // Removes only the link; the lead and the customer both stay as they are.
+    [HttpPost("{id:guid}/customer/unlink")]
+    public async Task<IActionResult> UnlinkCustomer(Guid id)
+    {
+        if (await _leadRepository.GetByIdAsync(id) is null)
+        {
+            return NotFound();
+        }
+
+        var current = await _customerRepository.GetForLeadAsync(id);
+        if (current is null)
+        {
+            return NoContent();
+        }
+
+        await _customerRepository.UnlinkLeadAsync(id);
+        await LogCustomerActivityAsync(id, $"Removed the link to customer {current.Name}");
+        return NoContent();
+    }
+
+    private Task LogCustomerActivityAsync(Guid leadId, string content) =>
+        _activityRepository.CreateAsync(new LeadActivity
+        {
+            Id = Guid.NewGuid(),
+            LeadId = leadId,
+            Type = "CustomerLink",
+            Content = content,
+            CreatedByUserId = User.FindFirst("sub")?.Value,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+
     [HttpPost("import")]
     [RequestSizeLimit(10_000_000)]
     public async Task<IActionResult> Import(IFormFile file, [FromForm] Guid pipelineStageId)
@@ -293,6 +535,12 @@ public class LeadsController : ControllerBase
         if (file is null || file.Length == 0)
         {
             return BadRequest(new { message = "A file is required." });
+        }
+
+        // Tenant-scoped lookup: another organization's stage id comes back null, same check as Create.
+        if (await _stageRepository.GetByIdAsync(pipelineStageId) is null)
+        {
+            return BadRequest(new { message = "pipelineStageId does not refer to an existing pipeline stage." });
         }
 
         string csvContent;
@@ -323,6 +571,12 @@ public class LeadsController : ControllerBase
         if (leads.Count > 0)
         {
             await _leadRepository.CreateManyAsync(leads);
+            var importStage = await _stageRepository.GetByIdAsync(pipelineStageId);
+            // A very large file is left for "Import from won leads" on the Customers screen so this request stays quick.
+            if (importStage is { IsWon: true } && leads.Count <= MaxInlineCustomerConversions)
+            {
+                await ConvertWonAsync(leads, HttpContext.RequestAborted);
+            }
             await _activityRepository.CreateManyAsync(leads.Select(lead => new LeadActivity
             {
                 Id = Guid.NewGuid(),

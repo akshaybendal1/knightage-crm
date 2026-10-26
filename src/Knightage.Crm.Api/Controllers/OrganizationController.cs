@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Knightage.Crm.Api.Contracts;
+using Knightage.Crm.Core.Exceptions;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Tenancy;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +22,8 @@ public class OrganizationController : ControllerBase
     private readonly IEmailSender _emailSender;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OrganizationController> _logger;
+    private readonly ILeadRepository _leadRepository;
+    private readonly IIdentityUserDirectory _identityUserDirectory;
 
     public OrganizationController(
         IIdentityOrganizationClient organizationClient,
@@ -28,7 +31,9 @@ public class OrganizationController : ControllerBase
         TenantContext tenantContext,
         IEmailSender emailSender,
         IConfiguration configuration,
-        ILogger<OrganizationController> logger)
+        ILogger<OrganizationController> logger,
+        ILeadRepository leadRepository,
+        IIdentityUserDirectory identityUserDirectory)
     {
         _organizationClient = organizationClient;
         _subscriptionStatusProvider = subscriptionStatusProvider;
@@ -36,6 +41,8 @@ public class OrganizationController : ControllerBase
         _emailSender = emailSender;
         _configuration = configuration;
         _logger = logger;
+        _leadRepository = leadRepository;
+        _identityUserDirectory = identityUserDirectory;
     }
 
     [HttpGet]
@@ -52,6 +59,16 @@ public class OrganizationController : ControllerBase
             var subscription = await _subscriptionStatusProvider.GetDetailsAsync(organizationId, authorizationHeader, cancellationToken);
             var organization = await _organizationClient.GetAsync(authorizationHeader, cancellationToken);
 
+            // Plan usage -- null when the org has no plan (unlimited), same fail-open
+            // posture as the limits themselves. Seat usage is effectively free here: this
+            // app already calls GetOrganizationUsersAsync elsewhere, no new cross-service call.
+            object? recordUsage = subscription.PlanMaxRecords is int maxRecords
+                ? new { current = await _leadRepository.CountActiveAsync(), max = maxRecords }
+                : null;
+            object? userUsage = subscription.PlanMaxUsers is int maxUsers
+                ? new { current = (await _identityUserDirectory.GetOrganizationUsersAsync(authorizationHeader, cancellationToken)).Count, max = maxUsers }
+                : null;
+
             return Ok(new
             {
                 organization.Name,
@@ -63,6 +80,8 @@ public class OrganizationController : ControllerBase
                 subscriptionEndDate = subscription.EndDate,
                 accentColor = subscription.AccentColor,
                 fieldForceTrackingEnabled = subscription.FieldForceTrackingEnabled,
+                recordUsage,
+                userUsage,
             });
         }
         catch (HttpRequestException ex)
@@ -82,6 +101,10 @@ public class OrganizationController : ControllerBase
         {
             await _organizationClient.UpdateAsync(request.Name, request.ContactEmail, request.ContactPhone, request.Address, authorizationHeader, cancellationToken);
             return NoContent();
+        }
+        catch (OrganizationUpdateRejectedException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
         }
         catch (HttpRequestException ex)
         {

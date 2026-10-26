@@ -6,6 +6,7 @@ using Knightage.Crm.Core.Tenancy;
 using Knightage.Crm.Infrastructure.Data;
 using Knightage.Crm.Infrastructure.ExternalServices;
 using Knightage.Crm.Infrastructure.Repositories;
+using Knightage.Crm.Infrastructure.Services;
 using Knightage.Crm.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -47,8 +48,12 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<TenantContext>();
-builder.Services.AddSingleton<DapperContext>();
+// Scoped, not Singleton -- DapperContext now reads TenantContext.DatabaseName per
+// request (for a tenant migrated to its own database), which is itself scoped.
+builder.Services.AddScoped<DapperContext>();
 builder.Services.AddScoped<IPipelineStageRepository, PipelineStageRepository>();
+builder.Services.AddScoped<IRoleScreenAccessRepository, RoleScreenAccessRepository>();
+builder.Services.AddScoped<IScreenAccessService, ScreenAccessService>();
 builder.Services.AddScoped<IMessageTemplateRepository, MessageTemplateRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ILeadRepository, LeadRepository>();
@@ -67,6 +72,7 @@ builder.Services.AddScoped<IDocumentPdfBuilder, DocumentPdfBuilder>();
 builder.Services.AddScoped<ISavedCustomReportRepository, SavedCustomReportRepository>();
 builder.Services.AddScoped<ICustomReportRepository, CustomReportRepository>();
 builder.Services.AddScoped<IOrganizationBrandingRepository, OrganizationBrandingRepository>();
+builder.Services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
 
 var identityBaseUrl = builder.Configuration["Client:IdentityBaseUrl"]
     ?? throw new InvalidOperationException("Client:IdentityBaseUrl is not configured.");
@@ -101,6 +107,17 @@ builder.Services.AddHttpClient("Platform", client =>
 });
 builder.Services.AddScoped<ISubscriptionStatusProvider, PlatformSubscriptionStatusProvider>();
 
+// Customers (won leads + field sales) and their copy in the Inventory portal. The portal's address is not
+// configured here: InventoryCustomerSync reads it from Platform's per-tenant services list.
+builder.Services.AddHttpClient("InventorySales", client =>
+{
+    // Runs inside the request that won a lead or added a customer -- a slow portal must not hold that up.
+    client.Timeout = TimeSpan.FromSeconds(8);
+});
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<IInventoryCustomerSync, InventoryCustomerSync>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+
 // No SMTP host configured (the default for a fresh checkout, and for prod until real
 // creds are set) -> log instead of attempting a real connection, so nothing hangs/errors
 // on missing creds. Same pattern as knightage-identity's Program.cs.
@@ -111,6 +128,26 @@ if (string.IsNullOrWhiteSpace(builder.Configuration["Smtp:Host"]))
 else
 {
     builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+}
+
+// Same fallback pattern as IEmailSender above: no service account configured (a fresh
+// checkout, or prod until real Firebase credentials are set) -> log instead of trying
+// to call FCM without credentials.
+if (string.IsNullOrWhiteSpace(builder.Configuration["Fcm:ServiceAccountKeyPath"]))
+{
+    builder.Services.AddScoped<IPushSender, NullPushSender>();
+}
+else
+{
+    // Must run exactly once per process (throws on a second call), so it lives here in
+    // the startup path rather than inside FcmPushSender's constructor.
+    var serviceAccountCredential = Google.Apis.Auth.OAuth2.CredentialFactory
+        .FromFile<Google.Apis.Auth.OAuth2.ServiceAccountCredential>(builder.Configuration["Fcm:ServiceAccountKeyPath"]);
+    FirebaseAdmin.FirebaseApp.Create(new FirebaseAdmin.AppOptions
+    {
+        Credential = serviceAccountCredential.ToGoogleCredential()
+    });
+    builder.Services.AddScoped<IPushSender, FcmPushSender>();
 }
 
 builder.Services.AddSingleton<ReminderDigestGate>();

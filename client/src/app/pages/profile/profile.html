@@ -68,4 +68,48 @@
       </div>
     </div>
   </div>
+
+  <div class="row mt-3">
+    <div class="col-12 col-md-6">
+      <div class="card card-round border border-danger">
+        <div class="card-header">
+          <div class="card-title text-danger">Delete account</div>
+        </div>
+        <div class="card-body">
+          @if (role === 'Owner') {
+            <p class="text-muted">
+              You're this organization's owner, so your account can't be deleted from here &mdash; an organization must
+              always keep an owner. To close the whole organization and delete its data, follow the steps on the
+              delete-account page.
+            </p>
+            <a routerLink="/delete-account" class="btn btn-outline-danger">How to delete the organization</a>
+          } @else {
+            <p class="text-muted">
+              This permanently removes your name, email, phone number, password and Google link, and signs you out.
+              Records your organization created or assigned to you stay with the organization, shown as "Deleted
+              user". This can't be undone.
+            </p>
+            <form (ngSubmit)="deleteAccount()">
+              <div class="form-group mb-3">
+                <label class="form-label" for="deleteConfirmEmail">Type your email ({{ email }}) to confirm</label>
+                <input id="deleteConfirmEmail" name="deleteConfirmEmail" type="email" class="form-control" [(ngModel)]="deleteConfirmEmail" autocomplete="off" />
+              </div>
+              @if (hasPassword) {
+                <div class="form-group mb-3">
+                  <label class="form-label" for="deletePassword">Your password</label>
+                  <input id="deletePassword" name="deletePassword" type="password" class="form-control" [(ngModel)]="deletePassword" autocomplete="current-password" />
+                </div>
+              }
+              @if (deleteError()) {
+                <div class="alert alert-danger py-2">{{ deleteError() }}</div>
+              }
+              <button type="submit" class="btn btn-danger" [disabled]="deleting() || !canDeleteAccount()">
+                {{ deleting() ? 'Deleting...' : 'Delete my account' }}
+              </button>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
 }

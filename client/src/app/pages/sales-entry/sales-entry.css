@@ -4,3 +4,14 @@
 .owner-value {
   color: var(--text-primary);
 }
+
+/* The picked customer's saved details, shown under the dropdown so the rep can confirm it is the right one. */
+.customer-details span + span::before {
+  content: ' \00b7  ';
+}
+
+.new-customer-form {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.3));
+  border-radius: 0.5rem;
+}

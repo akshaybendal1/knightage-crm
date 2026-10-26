@@ -7,19 +7,21 @@ import { IdentityApi } from '../../../core/identity-api';
 import { Auth } from '../../../core/auth';
 import { AppConfig } from '../../../core/app-config';
 import { requestCalendarConnection } from '../../../core/google-calendar';
-import { DocumentType, Lead, LeadActivity, LeadDocument, LeadProduct, LeadTask, Meeting, MessageTemplate, OrgUser, PipelineStage, Product, ProductStage } from '../../../core/models';
+import { Customer, DocumentType, Lead, LeadActivity, LeadDocument, LeadProduct, LeadTask, Meeting, MessageTemplate, OrgUser, PipelineStage, Product, ProductStage } from '../../../core/models';
 import { timeAgo } from '../../../core/time-ago';
 import { isOverdue } from '../../../core/task-status';
 import { isLeadStuck, isLeadProductStuck } from '../../../core/stuck-status';
+import { describeBulkMove } from '../../../core/stage-move';
 import { Toast } from '../../../core/toast';
 import { WhatsappComposer } from '../../../whatsapp-composer/whatsapp-composer';
 import { Loader } from '../../../loader/loader';
+import { StageMoveDialog, StageMoveDialogItem, StageMoveDialogResult } from '../../../stage-move-dialog/stage-move-dialog';
 
 const ACTIVITIES_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-lead-detail',
-  imports: [FormsModule, RouterLink, DatePipe, CurrencyPipe, WhatsappComposer, Loader],
+  imports: [FormsModule, RouterLink, DatePipe, CurrencyPipe, WhatsappComposer, Loader, StageMoveDialog],
   templateUrl: './lead-detail.html',
   styleUrl: './lead-detail.css',
 })
@@ -54,6 +56,16 @@ export class LeadDetail implements OnInit {
 
   leadProducts = signal<LeadProduct[]>([]);
   productStages = signal<ProductStage[]>([]);
+
+  // Moving product lines to another stage: one at a time from a line's own stage menu, or
+  // several ticked lines at once. Both ask for an optional note first.
+  selectedProductIds = signal<Set<string>>(new Set());
+  bulkProductStageId = '';
+  moveDialogOpen = signal(false);
+  moveDialogItems = signal<StageMoveDialogItem[]>([]);
+  moveDialogStageName = signal('');
+  moveBusy = signal(false);
+  private pendingMove: { lines: LeadProduct[]; stage: ProductStage; onCancel?: () => void } | null = null;
   showLeadProductForm = signal(false);
   savingLeadProduct = signal(false);
   newLeadProductId = '';
@@ -66,6 +78,15 @@ export class LeadDetail implements OnInit {
   showNewProductStageInput = false;
   newProductStageName = '';
   savingNewProductStage = signal(false);
+
+  // The customer this lead is linked to (shown in the Customer card), and the type-ahead for linking an existing one.
+  leadCustomer = signal<Customer | null>(null);
+  customerBusy = signal(false);
+  showLinkSearch = signal(false);
+  linkQuery = '';
+  linkResults = signal<Customer[]>([]);
+  private linkTimer: ReturnType<typeof setTimeout> | null = null;
+  private linkSeq = 0;
 
   documents = signal<LeadDocument[]>([]);
   showDocumentForm = signal(false);
@@ -146,6 +167,7 @@ export class LeadDetail implements OnInit {
     this.loadLeadProducts();
     this.loadDocuments();
     this.loadMeetings();
+    this.loadLeadCustomer();
     this.openRequestedSection();
     if (this.googleCalendarEnabled) {
       this.loadCalendarConnection();
@@ -220,8 +242,37 @@ export class LeadDetail implements OnInit {
     return user?.displayName ?? `User ${activity.createdByUserId.slice(0, 8)}`;
   }
 
+  // Stage-move activities carry what the user typed (and, for products, which product) in their
+  // JSON metadata; older entries have none, and anything unparseable is simply not shown.
+  private activityMetadata(activity: LeadActivity): { note?: string; productName?: string } {
+    if (!activity.metadata) {
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(activity.metadata);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  activityNote(activity: LeadActivity): string | null {
+    const note = this.activityMetadata(activity).note;
+    return typeof note === 'string' && note.trim() ? note : null;
+  }
+
+  activityProductName(activity: LeadActivity): string | null {
+    if (activity.type !== 'ProductStatusChange') {
+      return null;
+    }
+    const name = this.activityMetadata(activity).productName;
+    return typeof name === 'string' && name ? name : null;
+  }
+
   activityTypeClass(type: string): string {
     switch (type) {
+      case 'CustomerLink':
+        return 'badge-stage-change';
       case 'StageChange':
         return 'badge-stage-change';
       case 'LeadCreated':
@@ -241,6 +292,8 @@ export class LeadDetail implements OnInit {
 
   activityTypeLabel(type: string): string {
     switch (type) {
+      case 'CustomerLink':
+        return 'Customer';
       case 'StageChange':
         return 'Stage change';
       case 'LeadCreated':
@@ -258,6 +311,100 @@ export class LeadDetail implements OnInit {
       default:
         return 'Note';
     }
+  }
+
+  // --- customer card ------------------------------------------------------------------------------------------------------------
+
+  // One line of detail under a customer in the type-ahead list.
+  customerDetail(customer: Customer): string {
+    return [customer.company, customer.email, customer.phone].filter((v) => !!v).join(' · ');
+  }
+
+  loadLeadCustomer(): void {
+    this.api.getLeadCustomer(this.leadId).subscribe({
+      next: (result) => this.leadCustomer.set(result.customer),
+      error: () => {
+        // Non-fatal: the card just offers the actions.
+      },
+    });
+  }
+
+  addLeadAsCustomer(): void {
+    this.setCustomer({ createFromLead: true }, (result) =>
+      result.created ? 'Added as a customer.' : `Linked to the existing customer ${result.customer?.name ?? ''}.`.replace(' .', '.'),
+    );
+  }
+
+  linkExistingCustomer(customer: Customer): void {
+    this.setCustomer({ customerId: customer.id }, () => `Linked to customer ${customer.name}.`);
+  }
+
+  private setCustomer(payload: { customerId?: string; createFromLead?: boolean }, message: (r: { created: boolean; customer: Customer | null }) => string): void {
+    this.customerBusy.set(true);
+    this.api.setLeadCustomer(this.leadId, payload).subscribe({
+      next: (result) => {
+        this.customerBusy.set(false);
+        this.leadCustomer.set(result.customer);
+        this.showLinkSearch.set(false);
+        this.linkQuery = '';
+        this.toast.success(message(result));
+        this.loadActivities();
+      },
+      error: (err) => {
+        this.customerBusy.set(false);
+        this.toast.error(err?.error?.message ?? 'Could not update the customer.');
+      },
+    });
+  }
+
+  removeCustomerLink(): void {
+    const customer = this.leadCustomer();
+    if (!customer || !confirm(`Remove the link to ${customer.name}? The lead and the customer both stay.`)) {
+      return;
+    }
+    this.customerBusy.set(true);
+    this.api.unlinkLeadCustomer(this.leadId).subscribe({
+      next: () => {
+        this.customerBusy.set(false);
+        this.leadCustomer.set(null);
+        this.toast.success('Link removed.');
+        this.loadActivities();
+      },
+      error: () => {
+        this.customerBusy.set(false);
+        this.toast.error('Could not remove the link.');
+      },
+    });
+  }
+
+  toggleLinkSearch(): void {
+    this.showLinkSearch.set(!this.showLinkSearch());
+    if (this.showLinkSearch()) {
+      this.searchLinkCustomers();
+    }
+  }
+
+  onLinkQueryChange(): void {
+    if (this.linkTimer) {
+      clearTimeout(this.linkTimer);
+    }
+    this.linkTimer = setTimeout(() => this.searchLinkCustomers(), 250);
+  }
+
+  private searchLinkCustomers(): void {
+    const seq = ++this.linkSeq;
+    this.api.searchCustomers(this.linkQuery.trim()).subscribe({
+      next: (rows) => {
+        if (seq === this.linkSeq) {
+          this.linkResults.set(rows);
+        }
+      },
+      error: () => {
+        if (seq === this.linkSeq) {
+          this.linkResults.set([]);
+        }
+      },
+    });
   }
 
   loadLead(): void {
@@ -474,17 +621,104 @@ export class LeadDetail implements OnInit {
     });
   }
 
-  updateLeadProductStage(item: LeadProduct, productStageId: string): void {
-    if (productStageId === item.productStageId) {
+  // A line's own stage menu: nothing is saved until the note dialog is confirmed, and
+  // cancelling puts the menu back on the line's current stage.
+  requestProductStageChange(item: LeadProduct, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const stage = this.productStages().find((st) => st.id === select.value);
+    if (!stage || stage.id === item.productStageId) {
       return;
     }
-    this.api.updateLeadProductStage(item.id, productStageId).subscribe({
-      next: () => {
-        this.toast.success('Status updated.');
-        this.loadLeadProducts();
-        this.loadActivities(); // backend logs a ProductStatusChange activity
+    this.openMoveDialog([item], stage, () => {
+      select.value = item.productStageId;
+    });
+  }
+
+  isProductSelected(id: string): boolean {
+    return this.selectedProductIds().has(id);
+  }
+
+  toggleProductSelected(id: string): void {
+    const next = new Set(this.selectedProductIds());
+    if (!next.delete(id)) {
+      next.add(id);
+    }
+    this.selectedProductIds.set(next);
+  }
+
+  clearProductSelection(): void {
+    this.selectedProductIds.set(new Set());
+    this.bulkProductStageId = '';
+  }
+
+  startBulkProductMove(): void {
+    const stage = this.productStages().find((st) => st.id === this.bulkProductStageId);
+    const selected = this.selectedProductIds();
+    const lines = this.leadProducts().filter((p) => selected.has(p.id));
+    if (!stage || lines.length === 0) {
+      return;
+    }
+    this.openMoveDialog(lines, stage);
+  }
+
+  private openMoveDialog(lines: LeadProduct[], stage: ProductStage, onCancel?: () => void): void {
+    this.pendingMove = { lines, stage, onCancel };
+    this.moveDialogItems.set(lines.map((l) => ({ id: l.id, label: l.productName ?? 'Product' })));
+    this.moveDialogStageName.set(stage.name);
+    this.moveDialogOpen.set(true);
+  }
+
+  cancelMove(): void {
+    this.pendingMove?.onCancel?.();
+    this.pendingMove = null;
+    this.moveDialogOpen.set(false);
+  }
+
+  confirmMove(result: StageMoveDialogResult): void {
+    const pending = this.pendingMove;
+    if (!pending) {
+      return;
+    }
+    this.moveBusy.set(true);
+
+    const finish = (): void => {
+      this.moveBusy.set(false);
+      this.pendingMove = null;
+      this.moveDialogOpen.set(false);
+      this.clearProductSelection();
+      this.loadLeadProducts();
+      this.loadActivities(); // each move logs a ProductStatusChange entry (with the note)
+    };
+
+    if (pending.lines.length === 1) {
+      this.api.updateLeadProductStage(pending.lines[0].id, pending.stage.id, result.items[0]?.note).subscribe({
+        next: () => {
+          this.toast.success('Status updated.');
+          finish();
+        },
+        error: () => {
+          this.moveBusy.set(false);
+          this.cancelMove();
+          this.toast.error('Could not update status.');
+        },
+      });
+      return;
+    }
+
+    this.api.bulkUpdateLeadProductStage(pending.stage.id, result.items.map((i) => ({ id: i.id, note: i.note || undefined }))).subscribe({
+      next: (res) => {
+        const summary = describeBulkMove(res, pending.stage.name);
+        if (summary.hasFailures) {
+          this.toast.error(summary.text);
+        } else {
+          this.toast.success(summary.text);
+        }
+        finish();
       },
-      error: () => this.toast.error('Could not update status.'),
+      error: () => {
+        this.moveBusy.set(false);
+        this.toast.error('Could not move the selected products. Refresh to see where they are now.');
+      },
     });
   }
 

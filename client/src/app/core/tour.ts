@@ -6,6 +6,7 @@ import { PagedLeads } from './models';
 import { Auth } from './auth';
 import { CrmApi } from './crm-api';
 import { IdentityApi } from './identity-api';
+import { ScreenAccess } from './screen-access';
 import { buildTourSteps, TourStepDef } from './tour-steps';
 
 const DESKTOP_NAV_QUERY = '(min-width: 992px)';
@@ -58,6 +59,7 @@ export class Tour {
     private readonly auth: Auth,
     private readonly identityApi: IdentityApi,
     private readonly crmApi: CrmApi,
+    private readonly screenAccess: ScreenAccess,
   ) {}
 
   /** Called from App's effect on isAuthenticated() flipping true -- auto-starts the tour exactly once per user. */
@@ -94,13 +96,15 @@ export class Tour {
         map((org) => org.fieldForceTrackingEnabled),
         catchError(() => of(false)),
       ),
-    }).subscribe(({ leads, fieldForceTrackingEnabled }) => {
-      this.launch(role, leads.items[0]?.id ?? null, fieldForceTrackingEnabled, markOnFinish);
+      // Steps for screens this role can't open (Access Control) are skipped instead of bouncing off the guard.
+      screens: this.screenAccess.ensureLoaded().pipe(catchError(() => of(new Set<string>() as ReadonlySet<string>))),
+    }).subscribe(({ leads, fieldForceTrackingEnabled, screens }) => {
+      this.launch(role, leads.items[0]?.id ?? null, fieldForceTrackingEnabled, screens, markOnFinish);
     });
   }
 
-  private launch(role: string | undefined, firstLeadId: string | null, fieldForceTrackingEnabled: boolean, markOnFinish: boolean): void {
-    this.steps = buildTourSteps({ role, firstLeadId, fieldForceTrackingEnabled });
+  private launch(role: string | undefined, firstLeadId: string | null, fieldForceTrackingEnabled: boolean, screens: ReadonlySet<string>, markOnFinish: boolean): void {
+    this.steps = buildTourSteps({ role, firstLeadId, fieldForceTrackingEnabled, screens });
     if (!this.steps.length) {
       return;
     }

@@ -27,6 +27,21 @@ const config: CapacitorConfig = {
         twitter: false,
       },
     },
+    // launchAutoHide hides this as soon as the remote page finishes loading --
+    // launchShowDuration is a floor so it never just flashes on a fast network,
+    // not a fixed splash length. androidSplashResourceName points at the
+    // branded drawable/splash.xml (solid brand color + the launcher mark),
+    // replacing the placeholder Capacitor logo the template ships with.
+    SplashScreen: {
+      launchShowDuration: 400,
+      launchAutoHide: true,
+      launchFadeOutDuration: 300,
+      backgroundColor: '#FFFFFF',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_INSIDE',
+      showSpinner: true,
+      spinnerColor: '#1572E8',
+    },
   },
 };
 

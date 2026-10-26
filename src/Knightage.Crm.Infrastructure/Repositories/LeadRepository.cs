@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using Knightage.Crm.Core.Customers;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
 using Knightage.Crm.Core.Tenancy;
@@ -194,5 +195,28 @@ public class LeadRepository : ILeadRepository
         using var connection = _context.CreateConnection();
         var rows = await connection.QueryAsync<FieldSalesByRepRawRow>("usp_Leads_GetFieldSalesByRep", parameters, commandType: CommandType.StoredProcedure);
         return rows.ToList();
+    }
+
+    public async Task<IReadOnlyList<LeadMatch>> FindDuplicatesAsync(DuplicateQuery query, Guid? excludeLeadId, int max)
+    {
+        using var connection = _context.CreateConnection();
+        var rows = await connection.QueryAsync<LeadMatch>("usp_Leads_FindDuplicates", new
+        {
+            OrganizationId = _tenantContext.RequireOrganizationId(),
+            query.Email,
+            query.PhoneKey,
+            query.Name,
+            query.Company,
+            ExcludeLeadId = excludeLeadId,
+            Max = max,
+        }, commandType: CommandType.StoredProcedure);
+        return rows.ToList();
+    }
+
+    public async Task<int> CountActiveAsync()
+    {
+        var parameters = new { OrganizationId = _tenantContext.RequireOrganizationId() };
+        using var connection = _context.CreateConnection();
+        return await connection.ExecuteScalarAsync<int>("usp_Leads_CountActive", parameters, commandType: CommandType.StoredProcedure);
     }
 }

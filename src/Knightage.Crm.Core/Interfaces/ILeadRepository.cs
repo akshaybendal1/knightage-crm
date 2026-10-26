@@ -1,3 +1,4 @@
+using Knightage.Crm.Core.Customers;
 using Knightage.Crm.Core.Models;
 
 namespace Knightage.Crm.Core.Interfaces;
@@ -24,4 +25,13 @@ public interface ILeadRepository
     // Org-wide per-rep sales totals in a date range -- backs the Sales Dashboard's
     // "Sales by rep" chart. See usp_Leads_GetFieldSalesByRep.
     Task<IReadOnlyList<FieldSalesByRepRawRow>> GetFieldSalesByRepRawAsync(DateTime? sinceUtc, DateTime? untilUtc);
+
+    // Count of active (non-soft-deleted) Leads for the current org -- backs the plan's
+    // record-limit check and usage banner. A lightweight dedicated count, not GetPagedAsync's
+    // TotalCount (that would mean fetching a page of rows just to read a count).
+    Task<int> CountActiveAsync();
+
+    // Active leads that look like the one being typed (same email, phone, or name + company), strongest match first.
+    // excludeLeadId leaves out the lead being edited. See usp_Leads_FindDuplicates.
+    Task<IReadOnlyList<LeadMatch>> FindDuplicatesAsync(DuplicateQuery query, Guid? excludeLeadId, int max);
 }

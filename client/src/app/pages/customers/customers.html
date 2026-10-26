@@ -1,0 +1,243 @@
+<div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
+  <h3 class="fw-bold mb-0">Customers <span class="text-muted fw-normal fs-6">({{ visible().length }})</span></h3>
+  <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
+    {{ showForm() ? 'Close' : '+ New Customer' }}
+  </button>
+</div>
+
+<p class="text-muted small">
+  A lead becomes a customer when it reaches a Won stage, or when you add it as a customer from the lead or the New lead form. Customers also appear in the Add Sales Entry form and in the Inventory portal.
+</p>
+
+@if (isAdmin() && wonLeadsWithoutCustomer() > 0) {
+  <div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2 py-2">
+    <span>
+      {{ wonLeadsWithoutCustomer() }} won lead{{ wonLeadsWithoutCustomer() === 1 ? ' is' : 's are' }} not a customer yet
+      (won before customers existed, or imported in bulk).
+    </span>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-primary btn-sm" (click)="togglePicker()">
+        {{ pickerOpen() ? 'Close list' : 'Choose leads' }}
+      </button>
+      <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="importing()" (click)="importWonLeads()">
+        {{ importing() ? 'Converting...' : 'Convert all' }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (isAdmin() && pickerOpen()) {
+  <div class="card card-round">
+    <div class="card-header">
+      <div class="card-title">Won leads that are not customers yet</div>
+      <div class="card-category">Tick the leads to turn into customers. Your ticks are kept while you search and change pages.</div>
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-column flex-md-row gap-2 align-items-md-end justify-content-between mb-3">
+        <div class="flex-grow-1" style="max-width: 420px;">
+          <label class="form-label" for="wonLeadSearch">Search</label>
+          <input
+            id="wonLeadSearch"
+            name="wonLeadSearch"
+            type="search"
+            class="form-control"
+            placeholder="Name, organization, email, phone..."
+            [ngModel]="pickerSearch"
+            (ngModelChange)="onPickerSearch($event)"
+          />
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <span class="text-muted small">{{ selected().size }} selected</span>
+          @if (selected().size > 0) {
+            <button type="button" class="btn btn-label-secondary btn-sm" (click)="clearSelection()">Clear</button>
+          }
+          <button type="button" class="btn btn-primary btn-sm" [disabled]="converting() || selected().size === 0" (click)="convertSelected()">
+            {{ converting() ? 'Converting...' : 'Convert selected' }}
+          </button>
+        </div>
+      </div>
+
+      @if (pickerError()) {
+        <div class="alert alert-danger py-2">{{ pickerError() }}</div>
+      }
+
+      @if (pickerLoading()) {
+        <app-loader />
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-hover table-card-mobile">
+            <thead>
+              <tr>
+                <th style="width: 2.5rem;">
+                  <input type="checkbox" class="form-check-input" aria-label="Select all on this page" [checked]="allOnPageSelected()" (change)="togglePage()" />
+                </th>
+                <th>Name</th>
+                <th>Organization</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Stage</th>
+                <th>Won on</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (lead of pickerItems(); track lead.id) {
+                <tr (click)="toggleLead(lead.id)" style="cursor: pointer;">
+                  <td data-label="Select">
+                    <input type="checkbox" class="form-check-input" [attr.aria-label]="'Select ' + lead.name" [checked]="isSelected(lead.id)" (click)="$event.stopPropagation()" (change)="toggleLead(lead.id)" />
+                  </td>
+                  <td data-label="Name">{{ lead.name }}</td>
+                  <td data-label="Organization">{{ lead.company || '—' }}</td>
+                  <td data-label="Email">{{ lead.email || '—' }}</td>
+                  <td data-label="Phone">{{ lead.phone || '—' }}</td>
+                  <td data-label="Stage">{{ lead.stageName || '—' }}</td>
+                  <td data-label="Won on">{{ lead.wonAtUtc | date: 'mediumDate' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="text-muted">
+                    {{ pickerSearch.trim() ? 'No won leads match your search.' : 'Every won lead is already a customer.' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (pickerTotal() > pickerPageSize) {
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2">
+            <span class="text-muted small">{{ pickerTotal() }} won leads · page {{ pickerPage() }} of {{ pickerPages() }}</span>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="pickerPage() === 1" (click)="goToPickerPage(pickerPage() - 1)">Previous</button>
+              <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="pickerPage() === pickerPages()" (click)="goToPickerPage(pickerPage() + 1)">Next</button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
+
+@if (isAdmin() && pendingInventory() > 0) {
+  <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 py-2">
+    <span>
+      {{ pendingInventory() }} customer{{ pendingInventory() === 1 ? ' is' : 's are' }} not in the Inventory portal yet.
+      They are sent automatically; use this if it hasn't happened.
+    </span>
+    <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="syncing()" (click)="sendToInventory()">
+      {{ syncing() ? 'Sending...' : 'Send to Inventory' }}
+    </button>
+  </div>
+}
+
+@if (showForm()) {
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-round">
+      <div class="card-header">
+        <div class="card-title">New customer</div>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="addCustomer()">
+          <div class="form-group mb-3">
+            <label class="form-label" for="customerName">Name</label>
+            <input id="customerName" name="customerName" type="text" class="form-control" maxlength="200" [(ngModel)]="name" required />
+          </div>
+          <div class="form-group mb-3">
+            <label class="form-label" for="customerCompany">Organization <span class="text-muted">(optional)</span></label>
+            <input id="customerCompany" name="customerCompany" type="text" class="form-control" maxlength="200" [(ngModel)]="company" />
+          </div>
+          <div class="row">
+            <div class="col-sm-6">
+              <div class="form-group mb-3">
+                <label class="form-label" for="customerEmail">Email <span class="text-muted">(optional)</span></label>
+                <input id="customerEmail" name="customerEmail" type="email" class="form-control" maxlength="320" [(ngModel)]="email" />
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="form-group mb-3">
+                <label class="form-label" for="customerPhone">Phone <span class="text-muted">(optional)</span></label>
+                <input id="customerPhone" name="customerPhone" type="tel" class="form-control" maxlength="50" [(ngModel)]="phone" />
+              </div>
+            </div>
+          </div>
+          @if (errorMessage()) {
+            <div class="alert alert-danger py-2">{{ errorMessage() }}</div>
+          }
+          <button type="submit" class="btn btn-primary" [disabled]="saving() || !name.trim()">{{ saving() ? 'Adding...' : 'Add customer' }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+@if (!showForm() && errorMessage()) {
+  <div class="alert alert-danger">{{ errorMessage() }}</div>
+}
+
+<div class="row my-3">
+  <div class="col-md-4">
+    <label class="form-label" for="customerSearch">Search</label>
+    <input
+      id="customerSearch"
+      name="customerSearch"
+      type="search"
+      class="form-control"
+      placeholder="Name, organization, email, phone..."
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+    />
+  </div>
+</div>
+
+@if (loading()) {
+  <app-loader />
+} @else {
+  <div class="card card-round">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-card-mobile">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Organization</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Leads</th>
+              <th>Added</th>
+              <th>Inventory</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (customer of visible(); track customer.id) {
+              <tr>
+                <td data-label="Name">{{ customer.name }}</td>
+                <td data-label="Organization">{{ customer.company || '—' }}</td>
+                <td data-label="Email">{{ customer.email || '—' }}</td>
+                <td data-label="Phone">{{ customer.phone || '—' }}</td>
+                <td data-label="Leads">{{ customer.leadCount }}</td>
+                <td data-label="Added">{{ sourceLabel(customer) }}</td>
+                <td data-label="Inventory">
+                  @if (customer.inventoryCustomerId) {
+                    <span class="badge badge-success">In Inventory</span>
+                  } @else {
+                    <span class="badge badge-secondary">Not sent yet</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="text-muted">
+                  @if (search().trim()) {
+                    No customers match your search.
+                  } @else {
+                    No customers yet. They appear here when a lead is moved to a Won stage.
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

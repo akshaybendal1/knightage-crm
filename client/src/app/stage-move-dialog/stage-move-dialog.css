@@ -1,0 +1,54 @@
+.stage-move-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.stage-move-card {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 32px);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-move-card .card-body {
+  overflow-y: auto;
+}
+
+.stage-move-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* The list of what is being moved can be long; keep the buttons reachable. */
+.stage-move-list {
+  max-height: 120px;
+  overflow-y: auto;
+  padding-left: 1.1rem;
+  margin-bottom: 0;
+}
+
+.stage-move-each {
+  max-height: 45vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+@media (max-width: 575.98px) {
+  .stage-move-backdrop {
+    align-items: flex-end;
+    padding: 8px;
+  }
+
+  .stage-move-card {
+    max-height: calc(100vh - 16px);
+  }
+}

@@ -8,7 +8,7 @@ import { CoverageGranularity, computeCoverage, getPeriodRange, shiftPeriod, toDa
 import { FieldSalesEntryItem, OrgUser } from '../../core/models';
 import { Loader } from '../../loader/loader';
 
-// Admin-only (route-gated by adminGuard) -- picks one sales rep and a
+// Admin-only by default (route-gated by screenGuard) -- picks one sales rep and a
 // day/week/month period, shows every one of that rep's sales-entry locations
 // on a map plus a computed coverage area (convex hull). Was previously a card
 // embedded in sales-dashboard.ts; extracted verbatim into its own page/route.
