@@ -43,3 +43,29 @@ export function knightageAppUrl(key: KnightageAppKey, token: string | null): str
   const base = (isProduction ? PRODUCTION_URLS : LOCAL_URLS)[key];
   return token ? `${base}/auth-callback?token=${encodeURIComponent(token)}` : base;
 }
+
+// Switching apps is a full page load, so the old page would otherwise sit there unchanged until the other app's first
+// paint. Cover it straight away with the screen that app shows while it loads (index.html's .boot-splash, same name and
+// accent), so the tap answers at once and the switch reads as one step. Removed again if the browser restores this page
+// from its back/forward cache (Back from the other app).
+const SWITCH_SCREENS: Record<KnightageAppKey, { mark: string; text: string; accent: string }> = {
+  platform: { mark: '', text: 'Opening your services…', accent: '#4f6df5' },
+  crm: { mark: 'CRM', text: 'Opening CRM…', accent: '#e66239' },
+  accounting: { mark: 'Accounting', text: 'Opening Accounting…', accent: '#e66239' },
+  inventory: { mark: 'Inventory', text: 'Opening Inventory…', accent: '#e66239' },
+};
+
+export function showAppSwitchScreen(key: KnightageAppKey): void {
+  const screen = SWITCH_SCREENS[key];
+  const el = document.createElement('div');
+  el.className = 'boot-splash';
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.style.setProperty('--boot-accent', screen.accent);
+  el.innerHTML =
+    `<div class="boot-splash-mark">Knightage<span>${screen.mark}</span></div>` +
+    '<div class="boot-splash-spinner" aria-hidden="true"></div>' +
+    `<div class="boot-splash-text">${screen.text}</div>`;
+  document.body.appendChild(el);
+  window.addEventListener('pageshow', (event) => event.persisted && el.remove());
+}

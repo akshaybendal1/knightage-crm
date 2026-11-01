@@ -4,7 +4,7 @@ import { filter } from 'rxjs';
 import { Auth } from './core/auth';
 import { Branding } from './core/branding';
 import { CrmApi } from './core/crm-api';
-import { KnightageAppKey, knightageAppUrl, otherKnightageApps } from './core/knightage-apps';
+import { KnightageAppKey, knightageAppUrl, otherKnightageApps, showAppSwitchScreen } from './core/knightage-apps';
 import { OrgFeatures } from './core/org-features';
 import { ScreenAccess } from './core/screen-access';
 import { PlanUsage, SubscriptionStatus } from './core/models';
@@ -151,6 +151,7 @@ export class App {
       return;
     }
     event.preventDefault();
+    showAppSwitchScreen(key);
     window.location.href = knightageAppUrl(key, this.auth.token);
   }
 
