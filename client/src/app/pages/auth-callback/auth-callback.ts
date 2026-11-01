@@ -28,7 +28,9 @@ export class AuthCallback implements OnInit {
 
     try {
       this.auth.setTokenFromCallback(token);
-      this.router.navigateByUrl('/');
+      // Replace, don't push: otherwise Back lands on /auth-callback again, which signs in and moves forward
+      // again -- a loop that traps Back inside this app (and keeps the token in the history).
+      this.router.navigateByUrl('/', { replaceUrl: true });
     } catch {
       this.errorMessage = 'Could not complete sign-in with the provided token.';
     }

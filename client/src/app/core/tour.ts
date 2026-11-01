@@ -119,7 +119,9 @@ export class Tour {
       const step = this.steps[targetIndex];
       const selector = resolveSelector(step);
       if (step.route && this.router.url.split('?')[0] !== step.route) {
-        await this.router.navigateByUrl(step.route);
+        // replaceUrl: the tour moves the user around; its page changes mustn't pile up for Back to walk through
+        // afterwards (in the Android app Back would otherwise step through the tour's pages before leaving).
+        await this.router.navigateByUrl(step.route, { replaceUrl: true });
         await waitForSelector(selector, 3000);
       } else {
         // Yield even when no navigation is needed -- calling driverObj.drive()
@@ -152,7 +154,7 @@ export class Tour {
       onDestroyed: () => this.finish(),
     });
 
-    this.router.navigateByUrl('/dashboard').then(() => goTo(0));
+    this.router.navigateByUrl('/dashboard', { replaceUrl: true }).then(() => goTo(0));
   }
 
   private finish(): void {
