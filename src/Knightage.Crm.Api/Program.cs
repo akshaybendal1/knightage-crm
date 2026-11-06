@@ -69,6 +69,7 @@ builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 builder.Services.AddScoped<IProductStageRepository, ProductStageRepository>();
 builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
 builder.Services.AddScoped<IDocumentPdfBuilder, DocumentPdfBuilder>();
+builder.Services.AddSingleton<ILogoImageProcessor, LogoImageProcessor>();
 builder.Services.AddScoped<ISavedCustomReportRepository, SavedCustomReportRepository>();
 builder.Services.AddScoped<ICustomReportRepository, CustomReportRepository>();
 builder.Services.AddScoped<IOrganizationBrandingRepository, OrganizationBrandingRepository>();

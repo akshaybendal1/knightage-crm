@@ -1,7 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
+import { Auth } from './auth';
+import { SharedRequest } from './shared-request';
 import {
   BulkStageMoveResponse,
   Customer,
@@ -617,13 +619,17 @@ export class CrmApi {
     return this.http.post<void>(`/api/message-templates/${id}/status`, { isActive });
   }
 
-  // Organization
+  // Organization -- one request shared by the shell, OrgFeatures, guards and the tour when a page opens (SharedRequest).
+  // Auth is looked up when called, not injected: Auth -> PushNotifications -> CrmApi would otherwise be a cycle.
+  private readonly injector = inject(Injector);
+  private readonly organization = new SharedRequest(() => this.http.get<OrganizationDetails>('/api/organization'), 10_000);
+
   getOrganization() {
-    return this.http.get<OrganizationDetails>('/api/organization');
+    return this.organization.get(this.injector.get(Auth).token);
   }
 
   updateOrganization(payload: { name: string; contactEmail?: string; contactPhone?: string; address?: string }) {
-    return this.http.put<void>('/api/organization', payload);
+    return this.http.put<void>('/api/organization', payload).pipe(tap(() => this.organization.clear()));
   }
 
   // Branding
