@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Knightage.Crm.Api.Authorization;
 using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -6,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Knightage.Crm.Api.Controllers;
 
+// Signing a phone out of notifications must work even after CRM access was taken away.
+[AllowWithoutAppAccess]
 [Authorize]
 [ApiController]
 [Route("api/device-tokens")]

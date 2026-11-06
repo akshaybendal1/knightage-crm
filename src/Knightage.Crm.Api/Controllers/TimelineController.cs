@@ -1,6 +1,7 @@
 using Knightage.Crm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -18,6 +19,7 @@ public class TimelineController : ControllerBase
         _timelineRepository = timelineRepository;
     }
 
+    [RequirePermission("timeline:view")]
     [HttpGet("leads")]
     public async Task<IActionResult> GetLeadsTimeline([FromQuery] Guid pipelineStageId, [FromQuery] Guid? productId, [FromQuery] string? ownerUserId, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
     {
@@ -33,6 +35,7 @@ public class TimelineController : ControllerBase
         return Ok(new { items, totalCount });
     }
 
+    [RequirePermission("timeline:view")]
     [HttpGet("lead-products")]
     public async Task<IActionResult> GetLeadProductsTimeline([FromQuery] Guid productStageId, [FromQuery] Guid? productId, [FromQuery] string? ownerUserId, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
     {

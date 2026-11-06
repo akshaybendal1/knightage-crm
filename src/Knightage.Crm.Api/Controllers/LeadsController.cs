@@ -77,6 +77,7 @@ public class LeadsController : ControllerBase
         _customerRepository = customerRepository;
     }
 
+    [RequirePermission("leads:view")]
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] Guid? pipelineStageId, [FromQuery] Guid? productId, [FromQuery] string? ownerUserId, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
@@ -123,6 +124,7 @@ public class LeadsController : ControllerBase
         return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
+    [RequirePermission("leads:view")]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -130,6 +132,7 @@ public class LeadsController : ControllerBase
         return lead is null ? NotFound() : Ok(lead);
     }
 
+    [RequirePermission("leads:add")]
     [HttpPost]
     public async Task<IActionResult> Create(LeadRequest request, CancellationToken cancellationToken)
     {
@@ -187,6 +190,7 @@ public class LeadsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = lead.Id }, lead);
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, LeadRequest request)
     {
@@ -258,6 +262,7 @@ public class LeadsController : ControllerBase
     // long-press move dialog) -- Update above requires the entire LeadRequest, which is
     // unusable for a quick card move. Reuses the exact same StageChange activity shape
     // Update already logs; an optional Note rides along in that activity's metadata.
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}/stage")]
     public async Task<IActionResult> UpdateStage(Guid id, UpdateLeadStageRequest request)
     {
@@ -287,6 +292,7 @@ public class LeadsController : ControllerBase
     // on its own, in order, and reported on individually: one missing or failing lead never
     // stops or undoes the others, and nothing is deleted or rewritten -- a move is the same
     // stage update plus one new timeline entry that the single move above makes.
+    [RequirePermission("leads:edit")]
     [HttpPost("stage/bulk")]
     public async Task<IActionResult> BulkUpdateStage(BulkLeadStageMoveRequest request)
     {
@@ -404,6 +410,7 @@ public class LeadsController : ControllerBase
     // touching its Tasks/Meetings/Documents history. GetByIdAsync intentionally does NOT
     // filter on IsActive, so those child records (and this endpoint itself, for a
     // reactivate) keep resolving the lead fine.
+    [RequirePermission("leads:delete")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> SetStatus(Guid id, LeadStatusRequest request)
     {
@@ -447,6 +454,7 @@ public class LeadsController : ControllerBase
 
     // Links this lead to an existing customer, or makes it a customer right now (it does not have to be won). Making a customer
     // from the lead returns the customer this person already is when there is one, instead of creating a second record.
+    [RequirePermission("leads:add", "leads:edit")]
     [HttpPost("{id:guid}/customer")]
     public async Task<IActionResult> SetCustomer(Guid id, SetLeadCustomerRequest request, CancellationToken cancellationToken)
     {
@@ -498,6 +506,7 @@ public class LeadsController : ControllerBase
     }
 
     // Removes only the link; the lead and the customer both stay as they are.
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}/customer/unlink")]
     public async Task<IActionResult> UnlinkCustomer(Guid id)
     {
@@ -528,6 +537,7 @@ public class LeadsController : ControllerBase
             CreatedAtUtc = DateTime.UtcNow,
         });
 
+    [RequirePermission("leads:add")]
     [HttpPost("import")]
     [RequestSizeLimit(10_000_000)]
     public async Task<IActionResult> Import(IFormFile file, [FromForm] Guid pipelineStageId)
@@ -611,6 +621,7 @@ public class LeadsController : ControllerBase
         return Ok(new { items, hasMore });
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{leadId:guid}/activities")]
     public async Task<IActionResult> CreateActivity(Guid leadId, LeadActivityRequest request)
     {
@@ -645,6 +656,7 @@ public class LeadsController : ControllerBase
         return Ok(await _taskRepository.GetByLeadIdAsync(leadId));
     }
 
+    [RequirePermission("tasks:add")]
     [HttpPost("{leadId:guid}/tasks")]
     public async Task<IActionResult> CreateTask(Guid leadId, CreateTaskRequest request)
     {
@@ -683,6 +695,7 @@ public class LeadsController : ControllerBase
         return Ok(await _meetingRepository.GetByLeadIdAsync(leadId));
     }
 
+    [RequirePermission("calendar:add")]
     [HttpPost("{leadId:guid}/meetings")]
     public async Task<IActionResult> CreateMeeting(Guid leadId, CreateMeetingRequest request)
     {
@@ -751,6 +764,7 @@ public class LeadsController : ControllerBase
         return Ok(await _leadProductRepository.GetByLeadIdAsync(leadId));
     }
 
+    [RequirePermission("leads:add", "leads:edit")]
     [HttpPost("{leadId:guid}/products")]
     public async Task<IActionResult> AddLeadProduct(Guid leadId, AddLeadProductRequest request)
     {
@@ -806,6 +820,7 @@ public class LeadsController : ControllerBase
         return Ok(await _documentRepository.GetByLeadIdAsync(leadId));
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{leadId:guid}/documents")]
     public async Task<IActionResult> CreateDocument(Guid leadId, CreateDocumentRequest request)
     {

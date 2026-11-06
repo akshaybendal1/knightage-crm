@@ -21,7 +21,12 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     WebRootPath = "wwwroot/browser"
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Refuses CRM to a user whose administrator turned it off for them (Platform -> Users).
+    options.Filters.Add<Knightage.Crm.Api.Authorization.AppAccessFilter>();
+});
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -107,6 +112,8 @@ builder.Services.AddHttpClient("Platform", client =>
     client.Timeout = TimeSpan.FromSeconds(3);
 });
 builder.Services.AddScoped<ISubscriptionStatusProvider, PlatformSubscriptionStatusProvider>();
+builder.Services.AddScoped<IUserAccessProvider, PlatformUserAccessProvider>();
+builder.Services.AddScoped<IPermissionService, Knightage.Crm.Api.Authorization.PermissionService>();
 
 // Customers (won leads + field sales) and their copy in the Inventory portal. The portal's address is not
 // configured here: InventoryCustomerSync reads it from Platform's per-tenant services list.

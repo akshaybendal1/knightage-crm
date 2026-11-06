@@ -13,9 +13,11 @@
     <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'leads'" [class.btn-label-light]="view() !== 'leads'" (click)="setView('leads')">Leads</button>
     <button type="button" class="btn btn-sm" [class.btn-primary]="view() === 'products'" [class.btn-label-light]="view() !== 'products'" (click)="setView('products')">Lead Products</button>
   </div>
-  <button type="button" class="btn btn-sm" [class.btn-primary]="selectMode()" [class.btn-label-secondary]="!selectMode()" [attr.aria-pressed]="selectMode()" (click)="toggleSelectMode()">
-    {{ selectMode() ? 'Done selecting' : 'Select multiple' }}
-  </button>
+  @if (perm.canDo('leads', 'edit')) {
+    <button type="button" class="btn btn-sm" [class.btn-primary]="selectMode()" [class.btn-label-secondary]="!selectMode()" [attr.aria-pressed]="selectMode()" (click)="toggleSelectMode()">
+      {{ selectMode() ? 'Done selecting' : 'Select multiple' }}
+    </button>
+  }
 </div>
 
 @if (selectMode()) {
@@ -108,7 +110,7 @@
             (cdkDropListDropped)="onLeadDrop($event, column)"
           >
             @for (item of column.items; track item.leadId) {
-              <div class="timeline-card" [class.selecting]="selectMode()" [class.selected]="isLeadSelected(item.leadId)" cdkDrag [cdkDragDisabled]="selectMode()">
+              <div class="timeline-card" [class.selecting]="selectMode()" [class.selected]="isLeadSelected(item.leadId)" cdkDrag [cdkDragDisabled]="selectMode() || !perm.canDo('leads', 'edit')">
                 @if (selectMode()) {
                   <input type="checkbox" class="form-check-input timeline-card-select" [checked]="isLeadSelected(item.leadId)" (change)="toggleLeadSelected(item)" [attr.aria-label]="'Select ' + item.leadName" />
                 }
@@ -160,7 +162,7 @@
             (cdkDropListDropped)="onProductDrop($event, column)"
           >
             @for (item of column.items; track item.leadProductId) {
-              <div class="timeline-card" [class.selecting]="selectMode()" [class.selected]="isProductSelected(item.leadProductId)" cdkDrag [cdkDragDisabled]="selectMode()">
+              <div class="timeline-card" [class.selecting]="selectMode()" [class.selected]="isProductSelected(item.leadProductId)" cdkDrag [cdkDragDisabled]="selectMode() || !perm.canDo('leads', 'edit')">
                 @if (selectMode()) {
                   <input type="checkbox" class="form-check-input timeline-card-select" [checked]="isProductSelected(item.leadProductId)" (change)="toggleProductSelected(item)" [attr.aria-label]="'Select ' + (item.productName || 'product') + ' for ' + item.leadName" />
                 }

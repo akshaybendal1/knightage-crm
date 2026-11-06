@@ -1,0 +1,20 @@
+<div class="card card-round mt-4 mx-auto" style="max-width: 520px">
+  <div class="card-body text-center p-4">
+    <i class="fas fa-lock fa-2x text-muted mb-3"></i>
+    <h3 class="fw-bold">You don't have access to CRM</h3>
+    <p class="text-muted">
+      Your administrator hasn't given you access to CRM. Ask them to turn it on for you in Platform, under Users.
+    </p>
+    @if (apps().length > 0) {
+      <p class="small text-muted mb-2">You can still open:</p>
+      <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+        @for (app of apps(); track app.key) {
+          <a class="btn btn-label-secondary btn-sm" [href]="url(app.key)" (click)="open($event, app.key)">
+            <i [class]="app.icon"></i> {{ app.name }}
+          </a>
+        }
+      </div>
+    }
+    <button type="button" class="btn btn-link btn-sm" (click)="auth.logout()">Sign out</button>
+  </div>
+</div>

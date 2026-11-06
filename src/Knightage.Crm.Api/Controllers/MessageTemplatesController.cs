@@ -22,7 +22,7 @@ public class MessageTemplatesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
 
-    [RequireScreen("message-templates")]
+    [RequirePermission("message-templates:add")]
     [HttpPost]
     public async Task<IActionResult> Create(MessageTemplateRequest request)
     {
@@ -39,7 +39,7 @@ public class MessageTemplatesController : ControllerBase
         return Ok(template);
     }
 
-    [RequireScreen("message-templates")]
+    [RequirePermission("message-templates:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, MessageTemplateRequest request)
     {
@@ -58,7 +58,7 @@ public class MessageTemplatesController : ControllerBase
         return Ok(existing);
     }
 
-    [RequireScreen("message-templates")]
+    [RequirePermission("message-templates:delete")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> SetStatus(Guid id, MessageTemplateStatusRequest request)
     {

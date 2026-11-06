@@ -1,6 +1,7 @@
 using Knightage.Crm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -16,10 +17,12 @@ public class DashboardController : ControllerBase
         _dashboardRepository = dashboardRepository;
     }
 
+    [RequirePermission("dashboard:view")]
     [HttpGet("pipeline-summary")]
     public async Task<IActionResult> GetPipelineSummary() =>
         Ok(await _dashboardRepository.GetPipelineSummaryAsync());
 
+    [RequirePermission("dashboard:view", "reports:view")]
     [HttpGet("won-lost")]
     public async Task<IActionResult> GetWonLost([FromQuery] string range = "week", [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
@@ -45,6 +48,7 @@ public class DashboardController : ControllerBase
         return Ok(new { counts.Won, counts.Lost, range });
     }
 
+    [RequirePermission("dashboard:view")]
     [HttpGet("activity-summary")]
     public async Task<IActionResult> GetActivitySummary()
     {
@@ -52,6 +56,7 @@ public class DashboardController : ControllerBase
         return Ok(new { count });
     }
 
+    [RequirePermission("dashboard:view", "reports:view")]
     [HttpGet("overdue-tasks")]
     public async Task<IActionResult> GetOverdueTasks()
     {
@@ -59,6 +64,7 @@ public class DashboardController : ControllerBase
         return Ok(new { count });
     }
 
+    [RequirePermission("dashboard:view")]
     [HttpGet("stuck-leads")]
     public async Task<IActionResult> GetStuckLeads()
     {

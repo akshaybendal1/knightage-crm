@@ -1,8 +1,10 @@
 <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
   <h3 class="fw-bold mb-0">Customers <span class="text-muted fw-normal fs-6">({{ visible().length }})</span></h3>
-  <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
-    {{ showForm() ? 'Close' : '+ New Customer' }}
-  </button>
+  @if (perm.canDo('customers', 'add')) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
+      {{ showForm() ? 'Close' : '+ New Customer' }}
+    </button>
+  }
 </div>
 
 <p class="text-muted small">

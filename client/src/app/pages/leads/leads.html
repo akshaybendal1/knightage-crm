@@ -4,9 +4,11 @@
     <button type="button" class="btn btn-label-secondary btn-sm" [disabled]="exporting()" (click)="exportLeads()">
       {{ exporting() ? 'Exporting...' : 'Export' }}
     </button>
-    <button type="button" class="btn btn-primary btn-sm" data-tour="new-lead-button" (click)="showForm.set(!showForm())">
-      {{ showForm() ? 'Close' : '+ New Lead' }}
-    </button>
+    @if (perm.canDo('leads', 'add')) {
+      <button type="button" class="btn btn-primary btn-sm" data-tour="new-lead-button" (click)="showForm.set(!showForm())">
+        {{ showForm() ? 'Close' : '+ New Lead' }}
+      </button>
+    }
   </div>
 </div>
 
@@ -374,13 +376,17 @@
     <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
       <span>{{ selectedLeadIds().size }} selected</span>
       <div class="d-flex align-items-center flex-wrap gap-2">
-        <select class="form-select form-select-sm bulk-stage-select" aria-label="Move selected leads to stage" [(ngModel)]="moveTargetStageId" name="moveTargetStageId">
-          <option value="">Move to stage&hellip;</option>
-          @for (s of stages(); track s.id) {
-            <option [value]="s.id">{{ s.name }}</option>
-          }
-        </select>
-        <button type="button" class="btn btn-primary btn-sm" [disabled]="!moveTargetStageId" (click)="openMoveDialog()">Move</button>
+        @if (perm.canDo('leads', 'edit')) {
+          <select class="form-select form-select-sm bulk-stage-select" aria-label="Move selected leads to stage" [(ngModel)]="moveTargetStageId" name="moveTargetStageId">
+            <option value="">Move to stage&hellip;</option>
+            @for (s of stages(); track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        }
+        @if (perm.canDo('leads', 'edit')) {
+          <button type="button" class="btn btn-primary btn-sm" [disabled]="!moveTargetStageId" (click)="openMoveDialog()">Move</button>
+        }
         <button type="button" class="btn btn-primary btn-sm" data-tour="bulk-whatsapp-button" (click)="openBulkPicker()">
           <i class="fab fa-whatsapp"></i> Send WhatsApp Message
         </button>
@@ -494,8 +500,12 @@
                   <td class="actions-cell">
                     <div class="actions-cell-inner">
                       <a [routerLink]="['/leads', lead.id]" class="btn btn-label-info btn-sm">View</a>
-                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
-                      <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteLead(lead)">Delete</button>
+                      @if (perm.canDo('leads', 'edit')) {
+                        <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(lead)">Edit</button>
+                      }
+                      @if (perm.canDo('leads', 'delete')) {
+                        <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteLead(lead)">Delete</button>
+                      }
                       <app-whatsapp-composer [phone]="lead.phone" [leadName]="lead.name" [yourName]="yourName" [templates]="templates()" />
                     </div>
                   </td>
@@ -606,13 +616,17 @@
                same visual weight as Edit) rather than sitting equal to View up front -->
           <div class="lead-card-actions">
             <a [routerLink]="['/leads', lead.id]" class="btn btn-primary btn-sm">View</a>
-            <button type="button" class="btn btn-label-secondary btn-sm icon-btn" (click)="startEdit(lead)" title="Edit" aria-label="Edit">
-              <i class="fa fa-pen"></i>
-            </button>
+            @if (perm.canDo('leads', 'edit')) {
+              <button type="button" class="btn btn-label-secondary btn-sm icon-btn" (click)="startEdit(lead)" title="Edit" aria-label="Edit">
+                <i class="fa fa-pen"></i>
+              </button>
+            }
             <app-whatsapp-composer [phone]="lead.phone" [leadName]="lead.name" [yourName]="yourName" [templates]="templates()" />
-            <button type="button" class="btn btn-label-danger btn-sm icon-btn" (click)="deleteLead(lead)" title="Delete" aria-label="Delete">
-              <i class="fa fa-trash"></i>
-            </button>
+            @if (perm.canDo('leads', 'delete')) {
+              <button type="button" class="btn btn-label-danger btn-sm icon-btn" (click)="deleteLead(lead)" title="Delete" aria-label="Delete">
+                <i class="fa fa-trash"></i>
+              </button>
+            }
           </div>
 
           <!-- 3: quick-add chips, compacted to a single row of icon+label pills -->

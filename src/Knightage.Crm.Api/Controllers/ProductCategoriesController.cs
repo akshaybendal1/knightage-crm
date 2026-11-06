@@ -3,6 +3,7 @@ using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -21,6 +22,7 @@ public class ProductCategoriesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetActive() => Ok(await _repository.GetActiveAsync());
 
+    [RequirePermission("product-categories:add")]
     [HttpPost]
     public async Task<IActionResult> Create(ProductCategoryRequest request)
     {
@@ -35,6 +37,7 @@ public class ProductCategoriesController : ControllerBase
         return Ok(category);
     }
 
+    [RequirePermission("product-categories:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, ProductCategoryRequest request)
     {
@@ -51,6 +54,7 @@ public class ProductCategoriesController : ControllerBase
         return Ok(existing);
     }
 
+    [RequirePermission("product-categories:delete")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> SetStatus(Guid id, ProductCategoryStatusRequest request)
     {

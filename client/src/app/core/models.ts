@@ -107,6 +107,12 @@ export interface ScreenAccessMatrix {
 export interface MyScreens {
   role: string;
   screens: string[];
+  /** False when an administrator has taken CRM away from this user (Platform -> Users). */
+  appAccess: boolean;
+  /** Which Knightage apps this user may open ("Crm", "InventorySales", "Accounting"). */
+  apps: Record<string, boolean>;
+  /** Area -> what this user may do there ("view", "add", "edit", "delete"). */
+  permissions: Record<string, string[]>;
 }
 
 // Bulk stage moves: one entry per lead / product line, each with its own optional note.

@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { ScreenAccess } from '../../core/screen-access';
+import { Component, OnInit, computed, signal, inject } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -49,6 +50,7 @@ interface ProductColumn {
   templateUrl: './timeline.html',
 })
 export class Timeline implements OnInit {
+  protected readonly perm = inject(ScreenAccess);
   view = signal<TimelineView>('leads');
   leadColumns = signal<LeadColumn[]>([]);
   productColumns = signal<ProductColumn[]>([]);

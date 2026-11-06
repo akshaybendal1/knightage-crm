@@ -176,6 +176,11 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () => import('./pages/profile/profile').then((m) => m.Profile),
       },
+      {
+        path: 'no-access',
+        title: 'No access — Knightage CRM',
+        loadComponent: () => import('./pages/no-access/no-access').then((m) => m.NoAccess),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

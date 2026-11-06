@@ -1,4 +1,5 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { ScreenAccess } from '../../core/screen-access';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmApi } from '../../core/crm-api';
@@ -12,6 +13,7 @@ import { Loader } from '../../loader/loader';
   templateUrl: './products.html',
 })
 export class Products implements OnInit {
+  protected readonly perm = inject(ScreenAccess);
   products = signal<Product[]>([]);
   categories = signal<ProductCategory[]>([]);
   loading = signal(false);

@@ -229,7 +229,7 @@
             <span>User Guide</span>
           </a>
           <div class="nav-section-label">Apps</div>
-          @for (app of otherApps; track app.key) {
+          @for (app of otherApps(); track app.key) {
             <a class="nav-link" [href]="appHomeUrl(app.key)" (click)="openApp($event, app.key)">
               <i [class]="app.icon"></i>
               <span>{{ app.name }}</span>

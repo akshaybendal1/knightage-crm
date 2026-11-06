@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Knightage.Crm.Api.Authorization;
 using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
+using Knightage.Crm.Core.Permissions;
 using Knightage.Crm.Core.ScreenAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,20 +17,42 @@ namespace Knightage.Crm.Api.Controllers;
 public class ScreenAccessController : ControllerBase
 {
     private readonly IScreenAccessService _screenAccessService;
+    private readonly IPermissionService _permissionService;
 
-    public ScreenAccessController(IScreenAccessService screenAccessService)
+    public ScreenAccessController(IScreenAccessService screenAccessService, IPermissionService permissionService)
     {
         _screenAccessService = screenAccessService;
+        _permissionService = permissionService;
     }
 
+    // The signed-in user's own screens and actions -- their role's Access Control setting with their own
+    // exceptions from Platform's Users screen on top. Allowed without CRM access: it's how the app finds
+    // out it should say "no access" instead of showing a broken page.
+    [AllowWithoutAppAccess]
     [HttpGet("me")]
     public async Task<IActionResult> GetMine()
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
-        var screens = await _screenAccessService.GetAllowedScreensAsync(role);
-        return Ok(new { role, screens });
+        var roleScreens = await _screenAccessService.GetAllowedScreensAsync(role);
+        var permissions = await _permissionService.GetCurrentAsync();
+        var screens = permissions.AppAccess
+            ? ScreenCatalog.All
+                .Where(s => PermissionCatalog.Find(s.Key) is null ? roleScreens.Contains(s.Key) : permissions.Can(s.Key, PermissionActions.View))
+                .Select(s => s.Key)
+                .ToList()
+            : new List<string>();
+        return Ok(new
+        {
+            role,
+            screens,
+            appAccess = permissions.AppAccess,
+            apps = permissions.Apps,
+            permissions = permissions.Features,
+        });
     }
 
+    // Platform's Users screen reads this too (CRM's role defaults), so an admin without CRM access can still use it.
+    [AllowWithoutAppAccess]
     [RequireScreen("access-control")]
     [HttpGet]
     public async Task<IActionResult> GetMatrix()

@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { Observable, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { CrmApi } from './crm-api';
+import { MyScreens } from './models';
 
 // Where to send someone who opens a screen their role can't, or who has just signed in:
 // the first screen they may open, in this order. My Profile is the always-available fallback.
@@ -34,7 +35,10 @@ const HOME_PRIORITY: { key: string; url: string }[] = [
 @Injectable({ providedIn: 'root' })
 export class ScreenAccess {
   private readonly allowed = signal<ReadonlySet<string> | null>(null);
+  private readonly details = signal<MyScreens | null>(null);
   readonly loaded = computed(() => this.allowed() !== null);
+  /** False once the server says this user may not use CRM at all (Platform -> Users). */
+  readonly appAccess = computed(() => this.details()?.appAccess !== false);
   private inflight: Observable<ReadonlySet<string>> | null = null;
 
   constructor(private readonly api: CrmApi) {}
@@ -43,12 +47,34 @@ export class ScreenAccess {
     return this.allowed()?.has(key) ?? false;
   }
 
+  /**
+   * May this user do this in that area ("leads", "add")? Their role's Access Control setting with their own
+   * exceptions from Platform's Users screen on top; the server checks the same before it saves anything.
+   */
+  canDo(area: string, action: 'view' | 'add' | 'edit' | 'delete'): boolean {
+    return this.details()?.permissions?.[area]?.includes(action) ?? false;
+  }
+
+  /** May this user open the other Knightage app (Apps menu)? Unknown counts as yes, as before. */
+  canOpenApp(service: 'Crm' | 'InventorySales' | 'Accounting'): boolean {
+    return this.details()?.apps?.[service] !== false;
+  }
+
   canAny(keys: readonly string[]): boolean {
     return keys.some((k) => this.can(k));
   }
 
   /** The first screen this user may open -- used for "/" after sign-in and when a screen is refused. */
+  /** The first screen this user may open other than the given ones, or null. */
+  firstScreenUrlExcept(keys: readonly string[]): string | null {
+    const set = this.allowed();
+    return HOME_PRIORITY.find((h) => set?.has(h.key) && !keys.includes(h.key))?.url ?? null;
+  }
+
   homeUrl(): string {
+    if (!this.appAccess()) {
+      return '/no-access';
+    }
     const set = this.allowed();
     return HOME_PRIORITY.find((h) => set?.has(h.key))?.url ?? '/profile';
   }
@@ -71,12 +97,14 @@ export class ScreenAccess {
 
   clear(): void {
     this.allowed.set(null);
+    this.details.set(null);
     this.inflight = null;
   }
 
   private load(): Observable<ReadonlySet<string>> {
     if (!this.inflight) {
       this.inflight = this.api.getMyScreens().pipe(
+        tap((result) => this.details.set(result)),
         map((result) => new Set(result.screens) as ReadonlySet<string>),
         tap((set) => this.allowed.set(set)),
         finalize(() => (this.inflight = null)),

@@ -1,9 +1,10 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
-import { map, catchError, of } from 'rxjs';
+import { map, catchError, of, switchMap } from 'rxjs';
 import { Auth } from './auth';
 import { CrmApi } from './crm-api';
 import { Toast } from './toast';
+import { ScreenAccess } from './screen-access';
 
 // Guards /sales-entry and /sales-dashboard: both need the org's Field Force Tracking
 // flag on, checked client-side here purely to avoid flashing the page before the
@@ -19,13 +20,21 @@ export const salesFeatureGuard: CanActivateFn = () => {
   const auth = inject(Auth);
   const router = inject(Router);
   const toast = inject(Toast);
+  const screenAccess = inject(ScreenAccess);
 
-  return api.getOrganization().pipe(
+  // The screen list first: where to send a Sales user depends on it.
+  return screenAccess.ensureLoaded().pipe(
+    catchError(() => of(null)),
+    switchMap(() => api.getOrganization()),
     map((org) => {
       if (org.fieldForceTrackingEnabled) {
         return true;
       }
-      if (auth.currentUser()?.role === 'Sales') {
+      // Someone given other screens (Platform -> Users) goes to one of those instead.
+      const elsewhere = screenAccess.firstScreenUrlExcept(['sales-entry', 'sales-dashboard', 'sales-coverage']);
+      if (auth.currentUser()?.role === 'Sales' && elsewhere) {
+        router.navigateByUrl(elsewhere);
+      } else if (auth.currentUser()?.role === 'Sales') {
         // A Sales user has no other usable page in this app -- if their org's admin
         // hasn't (or hasn't yet -- server-side flag changes can take up to 15 minutes
         // to take effect, see PlatformSubscriptionStatusProvider's cache) turned this

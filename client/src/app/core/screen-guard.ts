@@ -13,7 +13,7 @@ export const screenGuard = (screenKey: string): CanActivateFn => () => {
   const access = inject(ScreenAccess);
   const router = inject(Router);
   return access.ensureLoaded().pipe(
-    map((allowed) => (allowed.has(screenKey) ? true : router.createUrlTree([access.homeUrl()]))),
+    map((allowed) => (access.appAccess() && allowed.has(screenKey) ? true : router.createUrlTree([access.homeUrl()]))),
     // If the list can't be loaded, don't open a screen on a guess: My Profile needs no permission.
     catchError(() => of(router.createUrlTree(['/profile']))),
   );

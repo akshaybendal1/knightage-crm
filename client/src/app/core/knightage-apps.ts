@@ -34,6 +34,14 @@ const LOCAL_URLS: Record<KnightageAppKey, string> = {
   inventory: 'http://localhost:5106',
 };
 
+/** The Platform service key behind each app, for "may this user open it?" (Platform -> Users). Platform itself: always. */
+export const APP_SERVICE: Record<KnightageAppKey, 'Crm' | 'InventorySales' | 'Accounting' | null> = {
+  platform: null,
+  crm: 'Crm',
+  accounting: 'Accounting',
+  inventory: 'InventorySales',
+};
+
 export function otherKnightageApps(current: KnightageAppKey): KnightageApp[] {
   return APPS.filter((app) => app.key !== current);
 }

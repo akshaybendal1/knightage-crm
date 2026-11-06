@@ -4,6 +4,7 @@ using Knightage.Crm.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -32,6 +33,7 @@ public class LeadProductsController : ControllerBase
         _logger = logger;
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> UpdateQuantity(Guid id, UpdateLeadProductQuantityRequest request)
     {
@@ -46,6 +48,7 @@ public class LeadProductsController : ControllerBase
         return Ok(existing);
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}/stage")]
     public async Task<IActionResult> UpdateStage(Guid id, UpdateLeadProductStageRequest request)
     {
@@ -68,6 +71,7 @@ public class LeadProductsController : ControllerBase
     // Moves many lead-product lines to one product stage in a single request, each with its own
     // optional note. Same contract as the leads bulk move: every line is moved and reported
     // on its own, so one missing or failing line never stops or undoes the others.
+    [RequirePermission("leads:edit")]
     [HttpPost("stage/bulk")]
     public async Task<IActionResult> BulkUpdateStage(BulkProductStageMoveRequest request)
     {
@@ -174,6 +178,7 @@ public class LeadProductsController : ControllerBase
         return true;
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}/remove")]
     public async Task<IActionResult> Remove(Guid id)
     {

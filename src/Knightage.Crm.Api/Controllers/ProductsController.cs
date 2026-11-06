@@ -25,7 +25,7 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await _repository.GetAllAsync());
 
-    [RequireScreen("products")]
+    [RequirePermission("products:add")]
     [HttpPost]
     public async Task<IActionResult> Create(ProductRequest request)
     {
@@ -49,7 +49,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    [RequireScreen("products")]
+    [RequirePermission("products:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, ProductRequest request)
     {
@@ -75,7 +75,7 @@ public class ProductsController : ControllerBase
         return Ok(existing);
     }
 
-    [RequireScreen("products")]
+    [RequirePermission("products:delete")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> SetStatus(Guid id, ProductStatusRequest request)
     {

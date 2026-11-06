@@ -1,4 +1,5 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { ScreenAccess } from '../../core/screen-access';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CrmApi } from '../../core/crm-api';
 import { PipelineStage, ProductStage } from '../../core/models';
@@ -12,6 +13,7 @@ import { Loader } from '../../loader/loader';
   styleUrl: './pipeline-stages.css',
 })
 export class PipelineStages implements OnInit {
+  protected readonly perm = inject(ScreenAccess);
   activeTab = signal<'pipeline' | 'product'>('pipeline');
 
   stages = signal<PipelineStage[]>([]);

@@ -70,6 +70,7 @@ public class SalesEntriesController : ControllerBase
         return details.FieldForceTrackingEnabled;
     }
 
+    [RequirePermission("sales-entry:add")]
     [HttpPost]
     public async Task<IActionResult> Create(SalesEntryRequest request, CancellationToken cancellationToken)
     {

@@ -2,6 +2,7 @@ using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -37,6 +38,7 @@ public class MeetingsController : ControllerBase
         return Ok(meetings);
     }
 
+    [RequirePermission("calendar:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateMeetingRequest request)
     {
@@ -86,6 +88,7 @@ public class MeetingsController : ControllerBase
         return Ok(existing);
     }
 
+    [RequirePermission("calendar:edit")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateMeetingStatusRequest request)
     {

@@ -1,8 +1,10 @@
 <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pt-2 pb-3" data-tour="page-header">
   <h3 class="fw-bold mb-0">Product Categories</h3>
-  <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
-    {{ showForm() ? 'Close' : '+ New Category' }}
-  </button>
+  @if (perm.canDo('product-categories', 'add')) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
+      {{ showForm() ? 'Close' : '+ New Category' }}
+    </button>
+  }
 </div>
 
 @if (showForm()) {
@@ -63,8 +65,12 @@
                   <td data-label="Name">{{ category.name }}</td>
                   <td data-label="Sort order">{{ category.sortOrder }}</td>
                   <td>
-                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(category)">Edit</button>
-                    <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteCategory(category)">Delete</button>
+                    @if (perm.canDo('product-categories', 'edit')) {
+                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(category)">Edit</button>
+                    }
+                    @if (perm.canDo('product-categories', 'delete')) {
+                      <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteCategory(category)">Delete</button>
+                    }
                   </td>
                 </tr>
               }

@@ -3,6 +3,7 @@ using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -21,6 +22,7 @@ public class PipelineStagesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetActive() => Ok(await _repository.GetActiveAsync());
 
+    [RequirePermission("pipeline-stages:add", "leads:add", "leads:edit")]
     [HttpPost]
     public async Task<IActionResult> Create(PipelineStageRequest request)
     {
@@ -38,6 +40,7 @@ public class PipelineStagesController : ControllerBase
         return Ok(stage);
     }
 
+    [RequirePermission("pipeline-stages:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, PipelineStageRequest request)
     {
@@ -57,6 +60,7 @@ public class PipelineStagesController : ControllerBase
         return Ok(existing);
     }
 
+    [RequirePermission("pipeline-stages:delete")]
     [HttpPost("{id:guid}/status")]
     public async Task<IActionResult> SetStatus(Guid id, PipelineStageStatusRequest request)
     {

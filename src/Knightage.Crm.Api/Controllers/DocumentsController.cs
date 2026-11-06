@@ -2,6 +2,7 @@ using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -64,6 +65,7 @@ public class DocumentsController : ControllerBase
         return File(pdfBytes, "application/pdf", $"{document.Number}.pdf");
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}/send")]
     public async Task<IActionResult> Send(Guid id, CancellationToken cancellationToken)
     {
@@ -125,6 +127,7 @@ public class DocumentsController : ControllerBase
         return Ok(new { status = "Sent", sentAtUtc = now });
     }
 
+    [RequirePermission("leads:edit")]
     [HttpPost("{id:guid}/mark-paid")]
     public async Task<IActionResult> MarkPaid(Guid id)
     {

@@ -3,6 +3,7 @@ using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -90,6 +91,7 @@ public class TasksController : ControllerBase
         return Ok(new { count });
     }
 
+    [RequirePermission("tasks:edit")]
     [HttpPost("{id:guid}")]
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateTaskStatusRequest request)
     {

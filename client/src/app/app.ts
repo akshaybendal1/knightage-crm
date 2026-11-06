@@ -4,7 +4,7 @@ import { filter } from 'rxjs';
 import { Auth } from './core/auth';
 import { Branding } from './core/branding';
 import { CrmApi } from './core/crm-api';
-import { KnightageAppKey, knightageAppUrl, otherKnightageApps, showAppSwitchScreen } from './core/knightage-apps';
+import { APP_SERVICE, KnightageAppKey, knightageAppUrl, otherKnightageApps, showAppSwitchScreen } from './core/knightage-apps';
 import { OrgFeatures } from './core/org-features';
 import { ScreenAccess } from './core/screen-access';
 import { PlanUsage, SubscriptionStatus } from './core/models';
@@ -53,7 +53,13 @@ export class App {
   desktopSidebarVisible = signal<boolean>(localStorage.getItem('crm-sidebar-visible') !== 'false');
   userMenuOpen = signal(false);
   readonly currentYear = new Date().getFullYear();
-  readonly otherApps = otherKnightageApps('crm');
+  // The Apps menu leaves out apps this user's administrator hasn't given them (Platform -> Users).
+  readonly otherApps = computed(() =>
+    otherKnightageApps('crm').filter((app) => {
+      const service = APP_SERVICE[app.key];
+      return service === null || this.screenAccess.canOpenApp(service);
+    }),
+  );
 
   // Which collapsible sidebar submenus (Pipeline/Catalog/Insights/Settings/Field
   // Sales) are expanded -- the group containing the current route starts open so

@@ -3,6 +3,7 @@ using Knightage.Crm.Api.Contracts;
 using Knightage.Crm.Core.Exceptions;
 using Knightage.Crm.Core.Interfaces;
 using Knightage.Crm.Core.Tenancy;
+using Knightage.Crm.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,6 +46,8 @@ public class OrganizationController : ControllerBase
         _identityUserDirectory = identityUserDirectory;
     }
 
+    // The app's frame (organization name, subscription banner) loads this even for someone shown "no access".
+    [AllowWithoutAppAccess]
     [HttpGet]
     public async Task<IActionResult> GetOrganization(CancellationToken cancellationToken)
     {

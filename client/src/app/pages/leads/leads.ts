@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal, inject } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
@@ -23,6 +23,7 @@ import { Loader } from '../../loader/loader';
   styleUrl: './leads.css',
 })
 export class Leads implements OnInit {
+  protected readonly perm = inject(ScreenAccess);
   stages = signal<PipelineStage[]>([]);
   // Products a lead can be filtered by -- the "Filter by product" dropdown still uses
   // this (a lead can have multiple product line items now; multi-product management

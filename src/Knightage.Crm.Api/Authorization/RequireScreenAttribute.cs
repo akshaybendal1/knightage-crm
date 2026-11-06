@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Knightage.Crm.Core.Interfaces;
+using Knightage.Crm.Core.Permissions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -34,11 +35,22 @@ public class RequireScreenAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        var service = context.HttpContext.RequestServices.GetRequiredService<IScreenAccessService>();
-        var role = user.FindFirst(ClaimTypes.Role)?.Value;
-        if (!await service.CanAccessAsync(role, _screenKey))
+        // A screen whose access can also be set per user (Platform's Users screen) goes by the user's own
+        // View permission; the locked ones (Team, Organization, Access Control) stay by role.
+        bool allowed;
+        if (PermissionCatalog.Find(_screenKey) is not null)
         {
-            context.Result = new ObjectResult(new { message = "Your role doesn't have access to this. Ask an administrator to change it in Access Control." })
+            allowed = await context.HttpContext.RequestServices.GetRequiredService<IPermissionService>().CanAsync(_screenKey, PermissionActions.View);
+        }
+        else
+        {
+            var service = context.HttpContext.RequestServices.GetRequiredService<IScreenAccessService>();
+            allowed = await service.CanAccessAsync(user.FindFirst(ClaimTypes.Role)?.Value, _screenKey);
+        }
+
+        if (!allowed)
+        {
+            context.Result = new ObjectResult(new { message = "You don't have access to this. Ask an administrator to change it in Access Control or on Platform → Users.", permissionDenied = true })
             {
                 StatusCode = StatusCodes.Status403Forbidden,
             };

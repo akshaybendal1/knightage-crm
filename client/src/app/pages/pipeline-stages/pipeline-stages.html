@@ -11,9 +11,11 @@
 
 <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pb-3">
   <h4 class="fw-bold mb-0">Pipeline Stages</h4>
-  <button type="button" class="btn btn-primary btn-sm" data-tour="new-stage-button" (click)="showForm.set(!showForm())">
-    {{ showForm() ? 'Close' : '+ New Stage' }}
-  </button>
+  @if (perm.canDo('pipeline-stages', 'add')) {
+    <button type="button" class="btn btn-primary btn-sm" data-tour="new-stage-button" (click)="showForm.set(!showForm())">
+      {{ showForm() ? 'Close' : '+ New Stage' }}
+    </button>
+  }
 </div>
 
 @if (showForm()) {
@@ -97,8 +99,12 @@
                   <td data-label="Lost">{{ stage.isLost ? 'Yes' : '—' }}</td>
                   <td data-label="Default">{{ stage.isDefault ? 'Yes' : '—' }}</td>
                   <td>
-                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(stage)">Edit</button>
-                    <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteStage(stage)">Delete</button>
+                    @if (perm.canDo('pipeline-stages', 'edit')) {
+                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEdit(stage)">Edit</button>
+                    }
+                    @if (perm.canDo('pipeline-stages', 'delete')) {
+                      <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteStage(stage)">Delete</button>
+                    }
                   </td>
                 </tr>
               }
@@ -120,9 +126,11 @@
 
 <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-2 pb-3">
   <h4 class="fw-bold mb-0">Product Stages</h4>
-  <button type="button" class="btn btn-primary btn-sm" (click)="showProductForm.set(!showProductForm())">
-    {{ showProductForm() ? 'Close' : '+ New Stage' }}
-  </button>
+  @if (perm.canDo('pipeline-stages', 'add')) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="showProductForm.set(!showProductForm())">
+      {{ showProductForm() ? 'Close' : '+ New Stage' }}
+    </button>
+  }
 </div>
 
 @if (showProductForm()) {
@@ -206,8 +214,12 @@
                   <td data-label="Lost">{{ stage.isLost ? 'Yes' : '—' }}</td>
                   <td data-label="Default">{{ stage.isDefault ? 'Yes' : '—' }}</td>
                   <td>
-                    <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEditProduct(stage)">Edit</button>
-                    <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteProductStage(stage)">Delete</button>
+                    @if (perm.canDo('pipeline-stages', 'edit')) {
+                      <button type="button" class="btn btn-label-secondary btn-sm" (click)="startEditProduct(stage)">Edit</button>
+                    }
+                    @if (perm.canDo('pipeline-stages', 'delete')) {
+                      <button type="button" class="btn btn-label-danger btn-sm" (click)="deleteProductStage(stage)">Delete</button>
+                    }
                   </td>
                 </tr>
               }

@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { ScreenAccess } from '../../core/screen-access';
+import { Component, OnInit, computed, signal, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Auth } from '../../core/auth';
@@ -13,6 +14,7 @@ import { Loader } from '../../loader/loader';
   templateUrl: './customers.html',
 })
 export class Customers implements OnInit {
+  protected readonly perm = inject(ScreenAccess);
   customers = signal<Customer[]>([]);
   loading = signal(false);
   errorMessage = signal<string | null>(null);

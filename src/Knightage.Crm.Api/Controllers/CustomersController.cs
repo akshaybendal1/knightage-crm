@@ -3,6 +3,7 @@ using Knightage.Crm.Core.Customers;
 using Knightage.Crm.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Knightage.Crm.Api.Authorization;
 
 namespace Knightage.Crm.Api.Controllers;
 
@@ -27,6 +28,7 @@ public class CustomersController : ControllerBase
         _inventorySync = inventorySync;
     }
 
+    [RequirePermission("customers:view")]
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -48,6 +50,7 @@ public class CustomersController : ControllerBase
     // Brings customers added in the Inventory portal into the CRM's list (throttled to one attempt every couple of minutes per
     // organization; never fails the request). The field sales and New lead forms call it once when they open: they search the
     // customer list instead of loading all of it, and loading all of it was what used to trigger this as a side effect.
+    [RequirePermission("customers:view", "sales-entry:view")]
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
@@ -55,6 +58,7 @@ public class CustomersController : ControllerBase
         return Ok(new { added });
     }
 
+    [RequirePermission("customers:add", "sales-entry:add")]
     [HttpPost]
     public async Task<IActionResult> Create(CustomerRequest request, CancellationToken cancellationToken)
     {
@@ -72,6 +76,7 @@ public class CustomersController : ControllerBase
     // Turns leads that were already won before customers existed into customers. Safe to run again: a lead
     // that already has a customer is skipped, and someone who is already a customer is linked, not duplicated.
     [Authorize(Roles = "Owner,Admin")]
+    [RequirePermission("customers:add")]
     [HttpPost("import-won-leads")]
     public async Task<IActionResult> ImportWonLeads(CancellationToken cancellationToken)
     {
@@ -92,6 +97,7 @@ public class CustomersController : ControllerBase
 
     // Converts only the won leads the admin ticked.
     [Authorize(Roles = "Owner,Admin")]
+    [RequirePermission("customers:add")]
     [HttpPost("convert-won-leads")]
     public async Task<IActionResult> ConvertWonLeads(ConvertWonLeadsRequest request, CancellationToken cancellationToken)
     {

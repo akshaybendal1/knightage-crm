@@ -14,7 +14,7 @@
   <ul class="task-list">
     @for (task of tasks(); track task.id) {
       <li class="task-item" [class.overdue]="isOverdue(task)">
-        <input type="checkbox" (change)="completeTask(task)" />
+        <input type="checkbox" [disabled]="!perm.canDo('tasks', 'edit')" (change)="completeTask(task)" />
         <div>
           <div class="task-title">
             {{ task.title }}
