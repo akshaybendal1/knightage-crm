@@ -120,7 +120,9 @@ export class Auth {
     void this.pushNotifications.handleLogout();
     localStorage.removeItem(STORAGE_KEY);
     this.authState.set(null);
-    this.router.navigateByUrl('/login');
+    // Replace, don't push: the signed-out page takes the place of the page signed out from. Pushed, it left an extra
+    // entry behind, so in the Android app Back on the next user's home went to another copy of it instead of leaving.
+    this.router.navigateByUrl('/login', { replaceUrl: true });
   }
 
   private setAuth(result: AuthResult): void {
