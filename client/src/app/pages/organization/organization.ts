@@ -46,16 +46,28 @@ export class Organization implements OnInit {
     private readonly auth: Auth,
   ) {}
 
-  // Same handoff platform's own service launcher uses (services.ts's open()), reversed:
-  // pass this session's JWT via ?token= so platform's /auth-callback logs the user straight
-  // into /services instead of its login form -- both apps trust tokens from the same
-  // identity issuer, so no separate sign-in is needed.
+  // Same hand-over platform's own service launcher uses (services.ts's open()), reversed: a one-time code
+  // (Auth.handoffUrl()) so platform's /auth-callback signs the user straight into /services instead of its
+  // login form. The href stays the bare site for middle-click / copy link.
   platformUrl(): string {
-    const token = this.auth.token;
-    if (!token) {
-      return this.appConfig.platformBaseUrl;
+    return this.appConfig.platformBaseUrl;
+  }
+
+  async openPlatform(event: MouseEvent): Promise<void> {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
     }
-    return `${this.appConfig.platformBaseUrl}/auth-callback?token=${encodeURIComponent(token)}`;
+    event.preventDefault();
+    // Open the tab now, while this is still the click: a tab opened after waiting for the code would be blocked as
+    // a pop-up. Where no tab can open (the Android app), go there in this one.
+    const tab = window.open('', '_blank');
+    const url = await this.auth.handoffUrl(this.appConfig.platformBaseUrl);
+    if (tab) {
+      tab.opener = null;
+      tab.location.href = url;
+    } else {
+      window.location.href = url;
+    }
   }
 
   ngOnInit(): void {

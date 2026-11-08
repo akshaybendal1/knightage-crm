@@ -1,9 +1,9 @@
 // The sibling Knightage apps listed under "Apps" in the sidebar. Same file in knightage-crm,
 // knightage-accounting and knightage-inventory-sales -- keep the copies in step.
 //
-// Links go to each app's /auth-callback?token=, the same handoff knightage-platform's service
-// launcher uses, so the user lands already signed in. Production hosts are fixed; anywhere else
-// (local dev) points at each API's launchSettings port, which also serves the built SPA.
+// A click opens the other app through Auth.handoffUrl(): its /auth-callback with a one-time sign-in code, the same
+// hand-over knightage-platform's service launcher uses, so the user lands already signed in. Production hosts are
+// fixed; anywhere else (local dev) points at each API's launchSettings port, which also serves the built SPA.
 
 export type KnightageAppKey = 'platform' | 'crm' | 'accounting' | 'inventory';
 
@@ -46,10 +46,10 @@ export function otherKnightageApps(current: KnightageAppKey): KnightageApp[] {
   return APPS.filter((app) => app.key !== current);
 }
 
-export function knightageAppUrl(key: KnightageAppKey, token: string | null): string {
+/** The app's own address (its home, or sign-in page when signed out there). */
+export function knightageAppUrl(key: KnightageAppKey): string {
   const isProduction = window.location.hostname.endsWith('knightagetech.com');
-  const base = (isProduction ? PRODUCTION_URLS : LOCAL_URLS)[key];
-  return token ? `${base}/auth-callback?token=${encodeURIComponent(token)}` : base;
+  return (isProduction ? PRODUCTION_URLS : LOCAL_URLS)[key];
 }
 
 // Switching apps is a full page load, so the old page would otherwise sit there unchanged until the other app's first

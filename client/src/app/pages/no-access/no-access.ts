@@ -19,13 +19,13 @@ export class NoAccess {
     }),
   );
 
-  open(event: MouseEvent, key: KnightageAppKey): void {
+  async open(event: MouseEvent, key: KnightageAppKey): Promise<void> {
     event.preventDefault();
     showAppSwitchScreen(key);
-    window.location.href = knightageAppUrl(key, this.auth.token);
+    window.location.href = await this.auth.handoffUrl(knightageAppUrl(key));
   }
 
   url(key: KnightageAppKey): string {
-    return knightageAppUrl(key, null);
+    return knightageAppUrl(key);
   }
 }

@@ -146,19 +146,19 @@ export class App {
     this.sidebarOpen.set(false);
   }
 
-  // The href is the bare site (for middle-click / copy link); a normal click carries this
-  // session's token so the other app opens signed in.
+  // The href is the bare site (for middle-click / copy link); a normal click hands this
+  // session over so the other app opens signed in.
   appHomeUrl(key: KnightageAppKey): string {
-    return knightageAppUrl(key, null);
+    return knightageAppUrl(key);
   }
 
-  openApp(event: MouseEvent, key: KnightageAppKey): void {
+  async openApp(event: MouseEvent, key: KnightageAppKey): Promise<void> {
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
       return;
     }
     event.preventDefault();
     showAppSwitchScreen(key);
-    window.location.href = knightageAppUrl(key, this.auth.token);
+    window.location.href = await this.auth.handoffUrl(knightageAppUrl(key));
   }
 
   private initialOpenNavGroups(): Set<string> {

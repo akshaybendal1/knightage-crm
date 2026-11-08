@@ -7,6 +7,9 @@
 
       <div [style.display]="pendingGoogleIdToken() ? 'none' : 'block'">
         <h2 class="login-heading">{{ mode() === 'login' ? 'Sign in to your account' : 'Create your organization' }}</h2>
+        @if (sessionNotice) {
+          <div class="alert alert-info py-2" role="status">{{ sessionNotice }}</div>
+        }
         <form (ngSubmit)="submit()">
           @if (mode() === 'register') {
             <div class="form-group mb-3">

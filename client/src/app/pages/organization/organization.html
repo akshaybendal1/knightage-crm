@@ -121,7 +121,7 @@
         </div>
         <div class="card-body">
           <p class="text-muted small mb-3">Manage your other Knightage services, billing, and account from one place.</p>
-          <a [href]="platformUrl()" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+          <a [href]="platformUrl()" target="_blank" rel="noopener" class="btn btn-primary btn-sm" (click)="openPlatform($event)">
             Open Knightage Platform <i class="fas fa-external-link-alt ms-1"></i>
           </a>
         </div>
